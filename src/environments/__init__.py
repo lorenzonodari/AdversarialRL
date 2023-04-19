@@ -28,7 +28,7 @@ class CookieWorldEnv(gym.Env):
         reward, done = self._world.execute_action(action)
         obs = self._world.get_features()
 
-        return obs, reward, done, False, None
+        return obs, reward, done, False, {}
 
     def reset(self, *, seed=None, options=None):
 
