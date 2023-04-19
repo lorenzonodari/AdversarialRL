@@ -30,10 +30,13 @@ class CookieWorldEnv(gym.Env):
 
         return obs, reward, done, False, None
 
-    def reset(self, seed=None, options=None):
+    def reset(self, *, seed=None, options=None):
 
         super().reset(seed=seed)
         self._world = CookieWorld(self._params)
+        obs = self._world.get_features()
+
+        return obs, {}
 
 
 register_env_gym(id='CookieWorld-v0', entry_point="environments:CookieWorldEnv")
