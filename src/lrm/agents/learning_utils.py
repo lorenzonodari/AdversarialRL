@@ -1,4 +1,4 @@
-import random, time, os
+import os
 
 def save_results(rewards, scores, rm_info, game_type, alg, rl, seed):
     folder = '../results/%s'%game_type

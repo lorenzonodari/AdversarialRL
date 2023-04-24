@@ -2,7 +2,10 @@
 This code evaluates the neighbors of a particular RM in parallel
 """
 
-import multiprocessing, random, math
+import multiprocessing
+import random
+import math
+
 
 def rm2str(delta, U_max, observations):
     """
@@ -15,6 +18,7 @@ def rm2str(delta, U_max, observations):
             else:              j = i
             rm_str += "(%d,%s,%d)"%(i,o,j)
     return rm_str
+
 
 def evaluate_rm(delta, local_change, tabu_set, U_max, observations, N, traces):
     """

@@ -12,6 +12,7 @@ class RewardFunction:
     def compare_to(self, other):
         raise NotImplementedError("To be implemented")
 
+
 class ConstantRewardFunction(RewardFunction):
     """
     Defines a constant reward for a 'simple reward machine'
@@ -28,6 +29,7 @@ class ConstantRewardFunction(RewardFunction):
 
     def get_reward(self,o1, a, o2):
         return self.c
+
 
 class EmpiricalRewardFunction(RewardFunction):
     """

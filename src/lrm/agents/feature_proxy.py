@@ -1,5 +1,6 @@
 import numpy as np
 
+
 class FeatureProxy:
     def __init__(self, num_features, num_states):
         self.num_features = num_features

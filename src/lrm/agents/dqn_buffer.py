@@ -3,7 +3,7 @@
 import numpy as np
 import random
 from ..common.segment_tree import SumSegmentTree, MinSegmentTree
-from ..common.schedules import LinearSchedule
+
 
 class ReplayBuffer(object):
     def __init__(self, size):
@@ -67,6 +67,7 @@ class ReplayBuffer(object):
         """
         idxes = [random.randint(0, len(self._storage) - 1) for _ in range(batch_size)]
         return self._encode_sample(idxes)
+
 
 class PrioritizedReplayBuffer(ReplayBuffer):
     def __init__(self, size, alpha):

@@ -9,6 +9,7 @@ from environments.game import Game
 - It also evaluates the performance of optimal policies
 """
 
+
 def run_baseline(env_params, lp, rl, k_order):
     """
     This code learns a reward machine from experience and uses dqn to learn an optimal policy for that RM:

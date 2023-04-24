@@ -17,6 +17,7 @@ NOTE:
     - The policies might be learned using DQN or QRM
 """
 
+
 def run_lrm(env_params, lp, rl):
     """
     This code learns a reward machine from experience and uses dqn to learn an optimal policy for that RM:
@@ -153,6 +154,7 @@ def run_lrm(env_params, lp, rl):
 
     # return the trainig rewards
     return train_rewards, rm_scores, rm.get_info()
+
 
 def run_lrm_experiments(env_params, lp, rl, n_seed, save):
     

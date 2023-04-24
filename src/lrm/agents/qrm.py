@@ -1,4 +1,4 @@
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 import os.path, time, random
 import numpy as np
 from .rl import RL

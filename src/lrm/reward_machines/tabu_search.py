@@ -5,6 +5,7 @@ This is a simple Tabu Search implementation to learn RMs from traces
 import random, time
 from .ts_util import evaluate_neighborhood, evaluate_rm, rm2str
 
+
 def sample_random_rm(U_max, observations, initial_obs):
     delta  = {}
     for i in range(U_max):
@@ -21,6 +22,7 @@ def sample_random_rm(U_max, observations, initial_obs):
                 available.remove(o)
     return delta
 
+
 def update_tabu_list(delta_str, tabu_set, tabu_queue, tabu_list_max):
     assert delta_str not in tabu_set, "Adding a tabu RM :S"
     tabu_set.add(delta_str)
@@ -29,6 +31,7 @@ def update_tabu_list(delta_str, tabu_set, tabu_queue, tabu_list_max):
     if len(tabu_queue) > tabu_list_max:
         to_remove = tabu_queue.pop(0)
         tabu_set.remove(to_remove)    
+
 
 def run_tabu_search(traces, U_max, tabu_list_max, n_workers, lr_steps, current_rm, perfect_rm):
 

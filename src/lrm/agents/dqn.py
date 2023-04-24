@@ -1,5 +1,5 @@
 import numpy as np
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 from rl import RL
 from dqn_network import create_net, create_target_updates
 from dqn_buffer import ReplayBuffer, PrioritizedReplayBuffer
