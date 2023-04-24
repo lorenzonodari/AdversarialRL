@@ -1,9 +1,9 @@
 import numpy as np
 import tensorflow.compat.v1 as tf
-from rl import RL
-from dqn_network import create_net, create_target_updates
-from dqn_buffer import ReplayBuffer, PrioritizedReplayBuffer
-from feature_proxy import FeatureProxy
+from .rl import RL
+from .dqn_network import create_net, create_target_updates
+from .dqn_buffer import ReplayBuffer, PrioritizedReplayBuffer
+from .feature_proxy import FeatureProxy
 from ..common.schedules import LinearSchedule
 import random
 
