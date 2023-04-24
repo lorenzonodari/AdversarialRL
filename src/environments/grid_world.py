@@ -1,15 +1,20 @@
+from .game_objects import *
+
+import random
 import numpy as np
 
-from .game_objects import *
 
 """
 Auxiliary class with the configuration parameters that the Game class needs
 """
+
+
 class GridWorldParams:
     def __init__(self, game_type, file_map, movement_noise):
         self.game_type      = game_type
         self.file_map       = file_map
         self.movement_noise = movement_noise
+
 
 class GridWorld:
 
@@ -274,6 +279,7 @@ class GridWorld:
                 if i > 8: return Actions.up
                 return Actions.left
             assert False, "ERROR!"
+
 
 def run_human_agent(game, max_time):
 

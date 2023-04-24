@@ -148,3 +148,17 @@ class CookieWorld(GridWorld):
         delta_u[(3, '3B')] = 1
         delta_u[(3, '2C')] = 0
         return delta_u
+
+# This code allow to play a game (for debugging purposes)
+if __name__ == '__main__':
+    file_map = "../../maps/cookie.txt"
+    game_type = "cookieworld"
+    max_time = 5000
+    num_total_steps = 1000000
+    num_steps = 0
+
+    params = GridWorldParams(game_type, file_map, 0)
+    while num_steps < num_total_steps:
+        game = CookieWorld(params)
+        reward,steps,trace = run_human_agent(game, max_time)
+        num_steps += steps
