@@ -1,6 +1,7 @@
 from environments import CookieWorldEnv
 from lrm.agents.run_lrm import run_lrm, original_run_lrm, get_default_lrm_config
-from run import set_environment
+from environments.game import GameParams
+from environments.grid_world import GridWorldParams
 import tensorflow as tf
 
 import time
@@ -45,7 +46,7 @@ def check_reimplementation(n_runs=15):
 
     env = CookieWorldEnv()
     lp = get_default_lrm_config()
-    env_orig = set_environment('cookie_world')
+    env_orig = GameParams(GridWorldParams('cookie_world', 'maps/cookie.txt', 0.05))
 
     for i in range(n_runs):
 
