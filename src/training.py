@@ -46,7 +46,7 @@ def check_reimplementation(n_runs=15):
 
     env = CookieWorldEnv()
     lp = get_default_lrm_config()
-    env_orig = GameParams(GridWorldParams('cookie_world', 'maps/cookie.txt', 0.05))
+    env_orig = GameParams(GridWorldParams('cookieworld', 'maps/cookie.txt', 0.05))
 
     for i in range(n_runs):
 
