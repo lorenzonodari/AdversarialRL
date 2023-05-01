@@ -20,26 +20,27 @@ def save_results(results, session_name, seed):
         os.makedirs(results_folder)
 
     # Save execution time (seconds)
-    with open('execution_time.txt', 'w') as time_file:
+    with open(f'{results_folder}/execution_time.txt', 'w') as time_file:
         time_file.write(str(run_time))
 
     # Save training rewards
-    with open('rewards.csv', 'w', newline='') as rewards_file:
+    with open(f'{results_folder}/rewards.csv', 'w', newline='') as rewards_file:
         writer = csv.writer(rewards_file)
         writer.writerow(['Training step', 'Total reward'])
         for step_num, reward in rewards:
             writer.writerow([step_num, reward])
 
     # Save RM scores
-    with open('rm_scores.csv', 'w', newline='') as scores_file:
+    with open(f'{results_folder/}rm_scores.csv', 'w', newline='') as scores_file:
         writer = csv.writer(scores_file)
         writer.writerow(['Training step', 'Used Traces', 'Total traces', 'Num. examples', 'RM Score', 'Perfect RM Score'])
         for step_num, used_traces, total_traces, n_examples, perfect_score, rm_score in rm_scores:
             writer.writerow([step_num, used_traces, total_traces, n_examples, rm_score, perfect_score])
 
     # Save final Reward Machine
-    with open('reward_machine.txt', 'w') as rm_file:
-        rm_file.write(rm_info)
+    with open(f'{results_folder}/reward_machine.txt', 'w') as rm_file:
+        for line in rm_info:
+            rm_file.write(f'{rm_info}\n')
 
 
 def check_reimplementation(n_runs=15):
