@@ -25,8 +25,11 @@ class LabeledEnvironment(gym.Wrapper):
         Step the environment and compute the labeling function for the returned observation.
 
         In order not to interfere with the environment observation space, events generated via the labeling function
-        are returned by the step() function via the info dictionary, at the "events" key.
-        The original environment is thus required not to return any information itself at the said key.
+        are returned by the step() function via the info dictionary, at the "events" key. Moreover, the "event_features"
+        key is also returned, containing a feature-space representation of the generated events, which is used by the
+        LRM algorithm to feed the underlying DQN.
+
+        The original environment is thus required not to return any information itself at the said keys.
 
         :param action: The action to take in the environment
         :return: The obs, reward, terminated, truncated, info tuple, with info["events"] containing the labeling
@@ -47,20 +50,22 @@ class LabeledEnvironment(gym.Wrapper):
         self.env.close()
 
 
-
 class CookieWorldEnv(gym.Env):
-    """Gymnasium-compliant implementation of CookieWorld from Icarte et al.
+    """
+    Gymnasium-compliant implementation of CookieWorld from Icarte et al.
 
     This class simply wraps the original implementation of the environment in order to comply with Gymnasium APIs.
     NB: Note that this environment has no terminal state: the agent can continue to act indefinitely.
         Nonetheless, the original author assumes a maximum episode length of 5000 steps during its experiments.
         This is achieved, however, by resorting to means that are external to this class.
+
     """
 
     def __init__(self):
 
         self._params = GridWorldParams('cookie_world', 'maps/cookie.txt', 0.05)  # Movement noise = 5%
         self._world = None
+        self._perfect_rm = CookieWorld(self._params).get_perfect_rm()
 
         self.action_space = gym.spaces.Discrete(4)  # Up, Right, Down, Left
         self.observation_space = gym.spaces.Box(low=0.0, high=1.0, shape=(256,))  # NB: Obs include events
@@ -68,17 +73,29 @@ class CookieWorldEnv(gym.Env):
     def step(self, action):
 
         reward, done = self._world.execute_action(action)
-        obs = self._world.get_features()
+        obs = self._world._get_map_features()
+        info = {
+            "events": self._world.get_events(),
+            "event_features": self._world._get_event_features()
+        }
 
-        return obs, reward, done, False, {}
+        return obs, reward, done, False, info
 
     def reset(self, *, seed=None, options=None):
 
         super().reset(seed=seed)
         self._world = CookieWorld(self._params)
-        obs = self._world.get_features()
+        obs = self._world._get_map_features()
+        info = {
+            "events": self._world.get_events(),
+            "event_features": self._world._get_event_features()
+        }
 
-        return obs, {}
+        return obs, info
+
+    def get_perfect_rm(self):
+
+        return self._perfect_rm
 
 
 register_env_gym(id='CookieWorld-v0', entry_point="environments:CookieWorldEnv")

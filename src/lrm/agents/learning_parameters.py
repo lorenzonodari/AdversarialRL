@@ -35,7 +35,7 @@ class LearningParameters:
         self.prioritized_replay_eps = prioritized_replay_eps
 
     def set_deep_rl(self, lr, learning_starts, train_freq, target_network_update_freq, 
-                    buffer_size, batch_size, use_double_dqn, num_hidden_layers, num_neurons):
+                    buffer_size, batch_size, use_double_dqn, num_hidden_layers, num_neurons, use_qrm):
         self.tabular_case = False
         self.lr = lr
         self.learning_starts = learning_starts
@@ -47,3 +47,4 @@ class LearningParameters:
         # Network architecture
         self.num_hidden_layers = num_hidden_layers
         self.num_neurons = num_neurons
+        self.use_qrm = use_qrm
