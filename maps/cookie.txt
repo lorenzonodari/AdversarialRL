@@ -1,0 +1,18 @@
+XXXXX
+XC CX
+X   X
+X   X
+XX XX
+XX XXXXXXXXXXXX
+XX XXXXX      X
+XX XXXXX      X
+XXA          TX
+XX XXXXX      X
+XX XXXXX      X
+XX XXXXXXXXXXXX
+XX XX
+X   X
+X   X
+XC CX
+XXXXX
+Rooms: [[(0,0),(4,4)],[(5,0),(11,6)],[(12,0),(16,4)],[(5,7),(11,14)]]
