@@ -8,7 +8,6 @@ from ..reward_machines.reward_machine import RewardMachine
 from .learning_parameters import LearningParameters
 from .dqn import DQN
 from .qrm import QRM
-from .learning_utils import save_results
 
 """
 - Pseudo-code:
@@ -353,15 +352,15 @@ def run_lrm(env: gym.Env, lp: LearningParameters = None):
     return train_rewards, rm_scores, rm.get_info()
 
 
-def run_lrm_experiments(env_params, lp, rl, n_seed, save):
-    
-    time_init = time.time()
-    random.seed(n_seed)
-    rewards, scores, rm_info = run_lrm(env_params, lp, rl)
-    if save:
-        # Saving the results
-        out_folder = "LRM/" + rl + "/" + env_params.game_type
-        save_results(rewards, scores, rm_info, out_folder, 'lrm', rl, n_seed)
-
-    # Showing results
-    print("Time:", "%0.2f"%((time.time() - time_init)/60), "mins\n")
+# def run_lrm_experiments(env_params, lp, rl, n_seed, save):
+#
+#     time_init = time.time()
+#     random.seed(n_seed)
+#     rewards, scores, rm_info = run_lrm(env_params, lp, rl)
+#     if save:
+#         # Saving the results
+#         out_folder = "LRM/" + rl + "/" + env_params.game_type
+#         save_results(rewards, scores, rm_info, out_folder, 'lrm', rl, n_seed)
+#
+#     # Showing results
+#     print("Time:", "%0.2f"%((time.time() - time_init)/60), "mins\n")
