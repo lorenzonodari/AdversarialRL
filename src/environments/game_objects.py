@@ -96,15 +96,17 @@ class Buttom(Entity):
         return "u" # buttom up
 
 class CookieButtom(Entity):
-    def __init__(self,i,j,k=0):
+    def __init__(self,i,j,k=0, *, seed=None):
         super().__init__(i,j,k=0)
+        self._seed = seed
+        self._random = random.Random(seed)
 
     def interact(self, agent, action):
         # removing all the cookies
         for c in self.cookies:
             c.in_map = False
         # adding one cookie at random
-        c = random.choice(self.cookies)
+        c = self._random.choice(self.cookies)
         c.in_map = True
         return True
 

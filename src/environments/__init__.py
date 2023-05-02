@@ -19,6 +19,7 @@ class LabeledEnvironment(gym.Wrapper):
 
         super().__init__(env)
         self._labfun = labeling_function
+        # TODO: Handle get_events() + get_event_features()
 
     def step(self, action):
         """
@@ -61,14 +62,15 @@ class CookieWorldEnv(gym.Env):
 
     """
 
-    def __init__(self):
+    def __init__(self, *, seed=None):
 
-        self._params = GridWorldParams('cookie_world', 'maps/cookie.txt', 0.05)  # Movement noise = 5%
+        self._seed = seed
+        self._params = GridWorldParams('cookieworld', 'maps/cookie.txt', 0.05)  # Movement noise = 5%
         self._world = None
         self._perfect_rm = CookieWorld(self._params).get_perfect_rm()
 
-        self.action_space = gym.spaces.Discrete(4)  # Up, Right, Down, Left
-        self.observation_space = gym.spaces.Box(low=0.0, high=1.0, shape=(256,))  # NB: Obs include events
+        self.action_space = gym.spaces.Discrete(4, seed=self._seed)  # Up, Right, Down, Left
+        self.observation_space = gym.spaces.Box(low=0.0, high=1.0, shape=(256,), seed=self._seed)  # TODO: Fix obs shape
 
     def step(self, action):
 
@@ -84,7 +86,8 @@ class CookieWorldEnv(gym.Env):
     def reset(self, *, seed=None, options=None):
 
         super().reset(seed=seed)
-        self._world = CookieWorld(self._params)
+
+        self._world = CookieWorld(self._params, seed=seed)
         obs = self._world._get_map_features()
         info = {
             "events": self._world.get_events(),

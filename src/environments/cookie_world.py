@@ -4,8 +4,9 @@ from .grid_world import GridWorldParams, GridWorld, run_human_agent
 
 class CookieWorld(GridWorld):
 
-    def __init__(self, params):
-        super().__init__(params)
+    def __init__(self, params, *, seed=None):
+
+        super().__init__(params, seed=seed)
 
     def _get_reward_and_gameover(self):
         # returns the reward and whether the game is over

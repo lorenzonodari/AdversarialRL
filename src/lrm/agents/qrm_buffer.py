@@ -1,7 +1,7 @@
 # This code is a modified version of "https://github.com/openai/baselines/blob/master/baselines/deepq/replay_buffer.py"
 
 import numpy as np
-import random
+import random  # TODO: Implement proper seeding
 from ..common.segment_tree import SumSegmentTree, MinSegmentTree
 
 

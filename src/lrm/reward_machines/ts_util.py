@@ -133,7 +133,8 @@ class Worker(multiprocessing.Process):
     def get_results(self):
         return self.results
 
-def evaluate_neighborhood(n_workers, delta, tabu_set, U_max, observations, N, initial_obs, traces):
+
+def evaluate_neighborhood(n_workers, delta, tabu_set, U_max, observations, N, initial_obs, traces, *, rng=None):
 
     # Creating the jobs
     jobs = []
@@ -148,7 +149,11 @@ def evaluate_neighborhood(n_workers, delta, tabu_set, U_max, observations, N, in
                     # we add this transition unless it is the initial state and the observation is in 
                     # the set of initial transitions!
                     jobs.append(('add',i,o,j))
-    random.shuffle(jobs)
+
+    if rng is None:
+        random.shuffle(jobs)
+    else:
+        rng.shuffle(jobs)
 
     current_id = multiprocessing.Value('i', 0)
     workers = [Worker(current_id, jobs, delta, tabu_set, U_max, observations, N, traces) for i in range(n_workers)]

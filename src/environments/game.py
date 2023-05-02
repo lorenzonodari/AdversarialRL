@@ -26,13 +26,13 @@ class Game:
         """
         return self.game.execute_action(action)
 
-    def restart(self):
+    def restart(self, *, seed=None):
         if self.params.game_type == "keysworld":
-            self.game = KeysWorld(self.params.game_params)
+            self.game = KeysWorld(self.params.game_params, seed=seed)
         if self.params.game_type == "symbolworld":
-            self.game = SymbolWorld(self.params.game_params)
+            self.game = SymbolWorld(self.params.game_params, seed=seed)
         if self.params.game_type == "cookieworld":
-            self.game = CookieWorld(self.params.game_params)
+            self.game = CookieWorld(self.params.game_params, seed=seed)
 
     def get_actions(self):
         """

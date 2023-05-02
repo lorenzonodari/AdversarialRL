@@ -1,9 +1,11 @@
 from .reward_functions import *
 from .tabu_search import run_tabu_search
 
+import random
+
 
 class RewardMachine:
-    def __init__(self, U_max, preprocess_trace, tabu_list_max, n_workers, rm_lr_steps, perfect_rm, use_perfect_rm):
+    def __init__(self, U_max, preprocess_trace, tabu_list_max, n_workers, rm_lr_steps, perfect_rm, use_perfect_rm, *, seed=None):
         # General learning parameters
         self.tabu_list_max = tabu_list_max # maximum size for the tabu list
         self.preprocess_trace = preprocess_trace # when True, the trace is preprocess to remove replicated transitions
@@ -24,6 +26,9 @@ class RewardMachine:
         self.n_examples_long = 0  # total length of the full traces
         self.n_examples_short = 0 # total length of the compressed traces
         self.terminal_obs = set()   # set of terminal observations
+
+        self._seed = seed
+        self._random = random.Random(seed)
 
     # Public methods -----------------------------------
 
@@ -59,7 +64,7 @@ class RewardMachine:
             # Learning the RM from the traces
             # Format: delta[(ui,o)] = uj iff observation 'o' moves the RM from 'ui' to 'uj'
             current_rm = self.delta_u
-            delta_u, score, score_perfect = run_tabu_search(self.traces, self.U_max, self.tabu_list_max, self.n_workers, self.rm_lr_steps, current_rm, self.perfect_rm)
+            delta_u, score, score_perfect = run_tabu_search(self.traces, self.U_max, self.tabu_list_max, self.n_workers, self.rm_lr_steps, current_rm, self.perfect_rm, rng=self._random)
 
         same_rm = delta_u is None
         if same_rm:

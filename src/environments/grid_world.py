@@ -18,11 +18,16 @@ class GridWorldParams:
 
 class GridWorld:
 
-    def __init__(self, params):
+    def __init__(self, params, *, seed=None):
+
+        self._seed = seed
+        self._random = random.Random(self._seed)
+
         self._load_map(params.file_map)
         self.movement_noise = params.movement_noise
         self.u  = 0
         self.rm = self.get_perfect_rm()
+
 
     def execute_action(self, a):
         """
@@ -71,9 +76,9 @@ class GridWorld:
 
         # without jumping
         direction = action
-        if random.random() < movement_noise:
+        if self._random.random() < movement_noise:
             cardinals = set(self.get_actions())
-            direction = random.choice(list(cardinals - set([direction])))
+            direction = self._random.choice(list(cardinals - set([direction])))
             
         # OBS: Invalid actions behave as NO-OP
         if direction == Actions.up   : ni-=1
@@ -205,7 +210,7 @@ class GridWorld:
                 if e == "K": entity = Key(i,j)
                 if e == "D": entity = Door(i,j)
                 if e == "B": entity = Buttom(i,j)
-                if e == "T": entity = CookieButtom(i,j)
+                if e == "T": entity = CookieButtom(i,j, seed=self._seed)
                 if e == "C": entity = Cookie(i,j)
                 if e == "A": self.agent = Agent(actions,i,j)
                 row.append(entity)

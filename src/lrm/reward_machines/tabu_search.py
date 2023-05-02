@@ -6,7 +6,7 @@ import random, time
 from .ts_util import evaluate_neighborhood, evaluate_rm, rm2str
 
 
-def sample_random_rm(U_max, observations, initial_obs):
+def sample_random_rm(U_max, observations, initial_obs, *, rng=None):
     delta  = {}
     for i in range(U_max):
         # Only consider observations that are not used as inputs to this state
@@ -17,7 +17,12 @@ def sample_random_rm(U_max, observations, initial_obs):
         #available = [o for o in observations]
         for j in range(i+1, U_max):
             if len(available) > 0:
-                o = random.choice(available)
+
+                if rng is None:
+                    o = random.choice(available)
+                else:
+                    o = rng.choice(available)
+
                 delta[(i,o)] = j
                 available.remove(o)
     return delta
@@ -33,7 +38,7 @@ def update_tabu_list(delta_str, tabu_set, tabu_queue, tabu_list_max):
         tabu_set.remove(to_remove)    
 
 
-def run_tabu_search(traces, U_max, tabu_list_max, n_workers, lr_steps, current_rm, perfect_rm):
+def run_tabu_search(traces, U_max, tabu_list_max, n_workers, lr_steps, current_rm, perfect_rm, rng=None):
 
     start = time.time()
     steps = 0
@@ -70,7 +75,7 @@ def run_tabu_search(traces, U_max, tabu_list_max, n_workers, lr_steps, current_r
     tabu_queue = [] # use append and pop(0)!
     while steps <= lr_steps:
         # 2. Creating an initial random RM
-        delta = sample_random_rm(U_max, observations, initial_obs)
+        delta = sample_random_rm(U_max, observations, initial_obs, rng=rng)
                 
         # 3. Evaluate current RM
         cost, delta, delta_str = evaluate_rm(delta, None, tabu_set, U_max, observations, N, traces)
@@ -87,7 +92,7 @@ def run_tabu_search(traces, U_max, tabu_list_max, n_workers, lr_steps, current_r
 
         while steps <= lr_steps:
             print("%0.2f[m]\t%d\tPerfect RM: %0.2f\tOld RM: %0.2f\tBest: %0.2f\tCurrent: %0.2f"%((time.time() - start)/60, steps, perfect_rm_cost, current_rm_cost, best_cost, cost))
-            cost, delta, delta_str = evaluate_neighborhood(n_workers, delta, tabu_set, U_max, observations, N, initial_obs, traces)
+            cost, delta, delta_str = evaluate_neighborhood(n_workers, delta, tabu_set, U_max, observations, N, initial_obs, traces, rng=rng)
 
             if delta is None:
                 print("No way out! restarting the search")

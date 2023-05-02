@@ -1,5 +1,4 @@
 import random
-import time
 
 import gymnasium as gym
 import numpy as np
@@ -32,14 +31,14 @@ def get_default_lrm_config():
                        rm_u_max=10,
                        rm_preprocess=True,
                        rm_tabu_size=10000,
-                       rm_lr_steps=10,
+                       rm_lr_steps=100,
                        rm_workers=8)
 
     lp.set_rl_parameters(gamma=0.9,
-                         train_steps=int(3e6),
+                         train_steps=int(5e5),
                          episode_horizon=int(5e3),
                          epsilon=0.1,
-                         max_learning_steps=int(3e6))
+                         max_learning_steps=int(5e5))
 
     lp.set_deep_rl(lr=5e-5,
                    learning_starts=50000,
@@ -55,13 +54,10 @@ def get_default_lrm_config():
     return lp
 
 
-def original_run_lrm(env_params, lp, rl='qrm'):
+def original_run_lrm(env, lp, rl='qrm', seed=None):
 
-    from environments.game import Game
-
-    env = Game(env_params)
     rm = RewardMachine(lp.rm_u_max, lp.rm_preprocess, lp.rm_tabu_size, lp.rm_workers, lp.rm_lr_steps,
-                       env.get_perfect_rm(), lp.use_perfect_rm)
+                       env.get_perfect_rm(), lp.use_perfect_rm, seed=seed)
     actions = env.get_actions()
     policy = None
     train_rewards = []
@@ -70,15 +66,22 @@ def original_run_lrm(env_params, lp, rl='qrm'):
     last_reward = 0
     step = 0
 
+    # Since we discard and recreate policies during execution, plus we don't want to
+    # always have the same seed for each of them, we need to make sure that the sequence of seeds
+    # is consistent, and depends on the seed given to the algorithm as a whole
+    rng = random.Random(seed)
+    sub_seed = rng.randint(0, int(4e9))
+    sub_seeder = random.Random(sub_seed)
+
     # Collecting random traces for learning the reward machine
     print("Collecting random traces...")
     while step < lp.rm_init_steps:
         # running an episode using a random policy
-        env.restart()
+        env.restart(seed=sub_seeder.randint(0, int(4e9)))
         trace = [(env.get_events(), 0.0)]
         for _ in range(lp.episode_horizon):
             # executing a random action
-            a = random.choice(actions)
+            a = rng.choice(actions)
             reward, done = env.execute_action(a)
             o2_events = env.get_events()
             reward_total += reward
@@ -117,9 +120,9 @@ def original_run_lrm(env_params, lp, rl='qrm'):
             if policy is None:
                 print("Learning a policy for the current RM...")
                 if rl == "dqn":
-                    policy = DQN(lp, len(o1_features), len(actions), rm)
+                    policy = DQN(lp, len(o1_features), len(actions), rm, seed=sub_seeder.randint(0, int(4e9)))
                 elif rl == "qrm":
-                    policy = QRM(lp, len(o1_features), len(actions), rm)
+                    policy = QRM(lp, len(o1_features), len(actions), rm, seed=sub_seeder.randint(0, int(4e9)))
                 else:
                     assert False, "RL approach is not supported yet"
 
@@ -190,7 +193,7 @@ def original_run_lrm(env_params, lp, rl='qrm'):
     return train_rewards, rm_scores, rm.get_info()
 
 
-def run_lrm(env: gym.Env, lp: LearningParameters = None):
+def run_lrm(env: gym.Env, lp: LearningParameters = None, *, seed=None):
     """
     Implementation of the Learning Reward Machine (LRM) algorithm by Icarte et al.
 
@@ -206,6 +209,7 @@ def run_lrm(env: gym.Env, lp: LearningParameters = None):
     Moreover, the environment is assumed to have a Discrete action space.
 
     :param env The gymnasium.Env to be used
+    :param seed The seed to be used for execution reproducibility
     :param lp The LearningParameters instance containing the desired algorithm configuration
     :return The reward sequence obtained during training
     """
@@ -216,7 +220,7 @@ def run_lrm(env: gym.Env, lp: LearningParameters = None):
         lp = get_default_lrm_config()
 
     # Initialization
-    rm = RewardMachine(lp.rm_u_max, lp.rm_preprocess, lp.rm_tabu_size, lp.rm_workers, lp.rm_lr_steps, env.get_perfect_rm(), lp.use_perfect_rm)  # TODO: Fix perfect RM
+    rm = RewardMachine(lp.rm_u_max, lp.rm_preprocess, lp.rm_tabu_size, lp.rm_workers, lp.rm_lr_steps, env.get_perfect_rm(), lp.use_perfect_rm, seed=seed)  # TODO: Fix perfect RM
 
     policy = None
     train_rewards = []
@@ -225,12 +229,19 @@ def run_lrm(env: gym.Env, lp: LearningParameters = None):
     last_reward = 0
     step = 0
 
+    # Since we discard and recreate policies during execution, plus we don't want to
+    # always have the same seed for each of them, we need to make sure that the sequence of seeds
+    # is consistent, and depends on the seed given to the algorithm as a whole.
+    # Same reasoning applies to the seed given to the env.reset() function.
+    sub_seed = random.Random(seed).randint(0, int(4e9))
+    sub_seeder = random.Random(sub_seed)
+
     # Collecting random traces for learning the reward machine
     print("Collecting random traces...")
     while step < lp.rm_init_steps:
 
         # Running an episode using a random policy
-        obs, info = env.reset()
+        obs, info = env.reset(seed=sub_seeder.randint(0, int(4e9)))
         trace = [(info["events"], 0.0)]
 
         for _ in range(lp.episode_horizon):
@@ -269,7 +280,7 @@ def run_lrm(env: gym.Env, lp: LearningParameters = None):
     finish_learning = False
     while step < lp.train_steps and not finish_learning:
 
-        o1, info = env.reset()
+        o1, info = env.reset(seed=sub_seeder.randint(0, int(4e9)))
         o1_features = np.concatenate((o1, info["event_features"]), axis=None)
         o1_events = info["events"]
         u1 = rm.get_initial_state()
@@ -282,9 +293,9 @@ def run_lrm(env: gym.Env, lp: LearningParameters = None):
             if policy is None:
                 print("Learning a policy for the current RM...")
                 if not lp.use_qrm:
-                    policy = DQN(lp, len(o1_features), env.action_space.n, rm)
+                    policy = DQN(lp, len(o1_features), env.action_space.n, rm, seed=sub_seeder.randint(0, int(4e9)))
                 else:
-                    policy = QRM(lp, len(o1_features), env.action_space.n, rm)
+                    policy = QRM(lp, len(o1_features), env.action_space.n, rm, seed=sub_seeder.randint(0, int(4e9)))
 
             # Select and execute an action using epsilon greedy
             action = policy.get_best_action(o1_features, u1, lp.epsilon)
@@ -350,17 +361,3 @@ def run_lrm(env: gym.Env, lp: LearningParameters = None):
 
     # return the trainig rewards
     return train_rewards, rm_scores, rm.get_info()
-
-
-# def run_lrm_experiments(env_params, lp, rl, n_seed, save):
-#
-#     time_init = time.time()
-#     random.seed(n_seed)
-#     rewards, scores, rm_info = run_lrm(env_params, lp, rl)
-#     if save:
-#         # Saving the results
-#         out_folder = "LRM/" + rl + "/" + env_params.game_type
-#         save_results(rewards, scores, rm_info, out_folder, 'lrm', rl, n_seed)
-#
-#     # Showing results
-#     print("Time:", "%0.2f"%((time.time() - time_init)/60), "mins\n")

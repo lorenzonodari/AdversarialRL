@@ -22,7 +22,7 @@ class QRM(RL):
     """
     This class includes a list of policies (a.k.a neural nets) for decomposing the current reward machine
     """
-    def __init__(self, lp, num_features, num_actions, reward_machine):
+    def __init__(self, lp, num_features, num_actions, reward_machine, *, seed=None):
         super().__init__()
         
         # learning parameters
@@ -47,6 +47,10 @@ class QRM(RL):
 
         # count of the number of environmental steps
         self.step = 0
+
+        # Initialize random source
+        self._seed = seed
+        self._random = random.Random(self._seed)
 
     def _get_step(self):
         return self.step
@@ -113,10 +117,11 @@ class QRM(RL):
                 self.train.append(p.td_error)
             self.train.append(p.train)
 
+    # TODO: Decouble best-action selection from epsilon-greedy exploration
     def get_best_action(self, s1, u1, epsilon):
-        if self._get_step() <= self.lp.learning_starts or random.random() < epsilon:
+        if self._get_step() <= self.lp.learning_starts or self._random.random() < epsilon:
             # epsilon greedy
-            return random.randrange(self.num_actions)
+            return self._random.randrange(self.num_actions)
         policy = self.policies[u1]
         s1 = s1.reshape((1,self.num_features))
         return self.sess.run(policy.get_best_action(), {self.s1: s1})[0]
