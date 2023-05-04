@@ -42,7 +42,7 @@ def save_results(results, session_name, seed):
     # Save final Reward Machine
     with open(f'{results_folder}/reward_machine.txt', 'w') as rm_file:
         for line in rm_info:
-            rm_file.write(f'{rm_info}\n')
+            rm_file.write(f'{line}\n')
 
 
 def check_reimplementation(n_runs=15):
