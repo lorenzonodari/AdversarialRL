@@ -6,51 +6,6 @@ from .cookie_world import CookieWorld
 from .grid_world import GridWorldParams
 
 
-class LabeledEnvironment(gym.Wrapper):
-    """
-    Wrapper that enriches an environment with a Labeling Function
-
-    The Labeling Function is a function from environment observations to propositional symbols that represent
-    high-level events that can be known to have verified in the environment given the last observation received.
-
-    """
-
-    def __init__(self, env, labeling_function):
-
-        super().__init__(env)
-        self._labfun = labeling_function
-        # TODO: Handle get_events() + get_event_features()
-
-    def step(self, action):
-        """
-        Step the environment and compute the labeling function for the returned observation.
-
-        In order not to interfere with the environment observation space, events generated via the labeling function
-        are returned by the step() function via the info dictionary, at the "events" key. Moreover, the "event_features"
-        key is also returned, containing a feature-space representation of the generated events, which is used by the
-        LRM algorithm to feed the underlying DQN.
-
-        The original environment is thus required not to return any information itself at the said keys.
-
-        :param action: The action to take in the environment
-        :return: The obs, reward, terminated, truncated, info tuple, with info["events"] containing the labeling
-                 function output, ie: info["events"] = labeling_function(obs)
-        """
-
-        obs, reward, terminated, truncated, info = self.env.step(action)
-        info['events'] = self._labfun(obs)
-
-        return obs, reward, terminated, truncated, info
-
-    def reset(self, *, seed=None, options=None):
-
-        self.env.reset(seed=seed, options=options)
-
-    def close(self):
-
-        self.env.close()
-
-
 class CookieWorldEnv(gym.Env):
     """
     Gymnasium-compliant implementation of CookieWorld from Icarte et al.
