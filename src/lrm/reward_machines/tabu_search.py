@@ -15,16 +15,21 @@ def sample_random_rm(U_max, observations, initial_obs, *, rng=None):
         else:
             available = [o for o in observations if len([1 for k in range(i) if (k,o) in delta and delta[(k,o)] == i]) == 0]
         #available = [o for o in observations]
+
         for j in range(i+1, U_max):
-            if len(available) > 0:
 
-                if rng is None:
-                    o = random.choice(available)
-                else:
-                    o = rng.choice(available)
+            # Keep adding transitions only as long as we have available observations to use
+            if len(available) == 0:
+                break
 
-                delta[(i,o)] = j
-                available.remove(o)
+            if rng is None:
+                o = random.choice(available)
+            else:
+                o = rng.choice(available)
+
+            delta[(i,o)] = j
+            available.remove(o)
+
     return delta
 
 
