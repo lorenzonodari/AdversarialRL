@@ -49,11 +49,12 @@ def evaluate_rm(delta, local_change, tabu_set, U_max, observations, N, traces):
     # Defining the prediction variables
     predictions = {}
     for o in observations:
+
+        if len(N[o]) < 2:
+            # In this case the prediction is trivial
+            continue
+
         for i in range(U_max):
-            if len(N[o]) < 2:
-                # In this case the prediction is trivial
-                continue
-            
             # Creating the prediction variables
             predictions[(i,o)] = set()
 
