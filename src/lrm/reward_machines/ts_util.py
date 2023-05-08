@@ -26,8 +26,10 @@ def evaluate_rm(delta, local_change, tabu_set, U_max, observations, N, traces):
     NOTE: local_change is a tuple '(action, ci, cj, co)' which indicates the transition that was 
           changed from the original RM 'delta'. The 'action' can be 'add' or 'rm'
     """
-    # updating the delta 
+    # Make sure we are not modifying the RM that was passed by the caller
     delta = delta.copy()
+
+    # If any, apply the specified change to the RM
     if local_change is not None:
         action, ci, co, cj = local_change
         if action == "rm":
@@ -50,42 +52,48 @@ def evaluate_rm(delta, local_change, tabu_set, U_max, observations, N, traces):
     predictions = {}
     for o in observations:
 
+        # If the N-model for an observation does not contain at least 2 possibile abstract observations, the prediction
+        # of L(e_t+1) from L(e_t) is trivial: there is only one possibility
         if len(N[o]) < 2:
-            # In this case the prediction is trivial
             continue
 
+        # Creating the prediction variables
         for i in range(U_max):
-            # Creating the prediction variables
-            predictions[(i,o)] = set()
+            predictions[(i, o)] = set()
 
     # Simulating a trace
     to_pay = []
-    to_remove = set([(i,o) for i,o in delta])
-    for trace_id in range(len(traces)):
-        i = 0
-        trace = traces[trace_id]
+    to_remove = set([(i, o) for i, o in delta])  # Intially, we mark every transition for removal
+    for trace in traces:
+        i = 0  # Reward machine state
         for t in range(1, len(trace)):
-            o1,_ = trace[t-1]
-            o2,_ = trace[t]
+            o1, _ = trace[t-1]
+            o2, _ = trace[t]
 
-            # adding the prediction
+            # Adding the current abstract observation to the prediction set of the previous one
+            # If len(N[o1]) == 1 there is no point in adding the prediction, as its contribution to the cost would be
+            # log(len(predictions[o1])) == log(1) == 0
             if len(N[o1]) > 1:
-                predictions[(i,o1)].add(o2)
-                to_pay.append((i,o1))
+                predictions[(i, o1)].add(o2)
+                to_pay.append((i, o1))
 
-            # progressing i
-            if (i,o2) in delta:
+            # Updating RM state
+            if (i, o2) in delta:
+
+                # If we are not at the last timestep in the trace, unmark the transition for
+                # removal in the RM. Thus, we only remove transitions in the RM that arise from
+                # the last experience in a trace, as it would not lead to any prediction
                 if t < len(trace) - 1:
-                    # The last transition on the trace isn't important because the
-                    # resulting RM state doesn't make any predictions
-                    to_remove.discard((i,o2))
-                i = delta[(i,o2)]
+                    to_remove.discard((i, o2))
 
-    # Cleaning the RM
+                # Transition the RM to the state that results from the current state and abstract observation
+                i = delta[(i, o2)]
+
+    # Cleaning the RM, removing the transitions that are not useful for prediction
     for k in to_remove:
         del delta[k]
 
-    # computing delta_str and checking that it is not part of the tabu list
+    # In order to check if the RM is in the tabù list, we first convert it to a string representation
     delta_str = rm2str(delta, U_max, observations)
     if delta_str in tabu_set:
         return float('inf'), None, None
