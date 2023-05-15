@@ -1,14 +1,17 @@
-import random
 import time
 import os
 import csv
 import multiprocessing
 
-from environments import CookieWorldEnv
 from lrm.agents.run_lrm import run_lrm, original_run_lrm, get_default_lrm_config
+from environments import CookieWorldEnv, PerfectRewardMachine, FlattenGridActions
 from environments.game import Game, GameParams
 from environments.grid_world import GridWorldParams
+from labeling import Labeling, MineCountLF
+
+import gymnasium as gym
 import tensorflow as tf
+import popgym
 
 
 def save_results(results, session_name, seed):
@@ -65,11 +68,27 @@ def check_reimplementation(n_runs=15):
         save_results(results + (run_time,), 'impl_test', seed=i)
 
 
+def test_minesweeper_lrm_minecount(n_runs=5):
+
+    lp = get_default_lrm_config()
+
+    for i in range(n_runs):
+
+        env = gym.make('popgym-MineSweeperMedium-v0')
+        env = FlattenGridActions(env)
+        env = PerfectRewardMachine(env, {})
+        env = Labeling(env, MineCountLF)
+
+        start = time.time()
+        results = run_lrm(env, seed=i)
+        run_time = int(time.time() - start)
+        save_results(results + (run_time,), 'test_minesweeper_minecount', seed=i)
+
+
 if __name__ == '__main__':
 
     tf.compat.v1.disable_v2_behavior()  # TODO: Find a better place (Or port to tf2 directly)
     multiprocessing.set_start_method('fork')  # TODO: Find a better place
 
-    check_reimplementation()
-
+    test_minesweeper_lrm_minecount()
 

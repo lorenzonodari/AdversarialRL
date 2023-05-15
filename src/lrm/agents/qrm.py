@@ -117,7 +117,6 @@ class QRM(RL):
                 self.train.append(p.td_error)
             self.train.append(p.train)
 
-    # TODO: Decouble best-action selection from epsilon-greedy exploration
     def get_best_action(self, s1, u1, epsilon):
         if self._get_step() <= self.lp.learning_starts or self._random.random() < epsilon:
             # epsilon greedy

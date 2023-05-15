@@ -154,7 +154,6 @@ class DQN(RL):
         self.replay_buffer.add(s1, a, reward, s2, done)
         self._add_step()
 
-    # TODO: Decouple best-action selection from epsilon-greedy exploration
     def get_best_action(self, s1, u1, epsilon):
         if self._get_step() <= self.lp.learning_starts or self._random.random() < epsilon:
             # epsilon greedy

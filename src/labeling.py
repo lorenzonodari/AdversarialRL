@@ -108,53 +108,33 @@ class LabelingFunction:
         raise NotImplementedError('Actual labeling functions must inherit from this class and override this method')
 
 
-class RepeatFirstLF(LabelingFunction):
+class MineCountLF(LabelingFunction):
     """
-    Labeling function implementation for the RepeatFirst environment from POPGym.
+    Labeling function for MineSweeper that generate events that represent how many mines are detected at each action.
     """
 
-    def get_events(self, obs, action, new_obs) -> str:
+    def get_events(self, obs, action, new_obs):
         """
-        Labeling implementation for RepeatFirst environment from POPGym.
+        High-level events for MineSweeper
 
-        Due to the simple nature of the enironment, only 4 events exist, each representing the value of the first
-        card extracted from the deck. Thus, after the first step, no more events are generated as the agent already
-        has all the information it needs to achieve optimal performance.
+        Each event simply represents the number of mines that were detected in the 8 squares surrounding the
+        last clicked square in the field.
 
-        :param obs: The previous known observation
+        :param obs: The previous observation received from the environment
         :param action: The previous action taken by the agent
-        :param new_obs: The new observation, arising after executing action
-        :return:
+        :param new_obs: The new observation received from the environment, after the execution of action
+        :return: The events that hold true in the new state of the environment, as observable by the agent
         """
 
-        # Initial observation
-        if obs is None and action is None:
-            return str(new_obs)
-        else:
-            return ""
+        return str(new_obs)
 
-    def get_event_features(self, events: str):
-        """
-        Convert given events to feature-space representation.
+    def get_event_features(self, events):
 
-        More specifically, each event is represented by simple one-hot encoding.
+        assert len(events) == 1, "Invalid event string"
 
-        - "0" -> [1, 0, 0, 0]
-        - "1" -> [0, 1, 0, 0]
-        - "2" -> [0, 0, 1, 0]
-        - "3" -> [0, 0, 0, 1]
-
-        :param events: The string representing
-        :return: The feature-space representation of the given events
-        """
-
-        assert events == "" or (len(events) == 1 and 0 <= int(events) <= 3), f"Invalid event string: {events}"
-
-        if events == "":
-            return np.zeros(4)
-
-        target_card = int(events)
-        features = np.zeros(4)
-        features[target_card] = 1.0
+        # Simply return the one-hot vector for the given event
+        features = np.zeros(10)
+        mines_number = int(events)
+        features[mines_number] = 1.0
         return features
 
