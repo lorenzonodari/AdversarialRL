@@ -4,7 +4,8 @@ import csv
 import multiprocessing
 
 from lrm.agents.run_lrm import run_lrm, original_run_lrm, get_default_lrm_config
-from environments import CookieWorldEnv, PerfectRewardMachine, FlattenGridActions
+from environments import CookieWorldEnv
+from environments.utils import PerfectRewardMachine, FlattenGridActions
 from environments.game import Game, GameParams
 from environments.grid_world import GridWorldParams
 from labeling import Labeling, MineCountLF
