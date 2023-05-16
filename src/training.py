@@ -15,11 +15,11 @@ import tensorflow as tf
 import popgym
 
 
-def save_results(results, session_name, seed):
+def save_results(results, run_time, session_name, seed):
 
     results_folder = f'results/{session_name}/seed_{seed}/'
 
-    rewards, rm_scores, rm_info, run_time = results
+    rewards, rm_scores, rm_info = results
 
     # Create folder if needed
     if not os.path.exists(results_folder):
@@ -61,12 +61,12 @@ def check_reimplementation(n_runs=15):
         start = time.time()
         orig_results = original_run_lrm(env_orig, lp, seed=i)
         run_time = int(time.time() - start)
-        save_results(orig_results + (run_time,), 'orig_test', seed=i)
+        save_results(orig_results, run_time, 'orig_test', seed=i)
 
         start = time.time()
         results = run_lrm(env, lp, seed=i)
         run_time = int(time.time() - start)
-        save_results(results + (run_time,), 'impl_test', seed=i)
+        save_results(results, run_time, 'impl_test', seed=i)
 
 
 def test_minesweeper_lrm_minecount(n_runs=5):
@@ -83,7 +83,7 @@ def test_minesweeper_lrm_minecount(n_runs=5):
         start = time.time()
         results = run_lrm(env, seed=i)
         run_time = int(time.time() - start)
-        save_results(results + (run_time,), 'test_minesweeper_minecount', seed=i)
+        save_results(results, run_time, 'test_minesweeper_minecount', seed=i)
 
 
 if __name__ == '__main__':
