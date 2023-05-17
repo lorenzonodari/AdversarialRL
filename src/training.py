@@ -3,7 +3,8 @@ import os
 import csv
 import multiprocessing
 
-from lrm.agents.run_lrm import run_lrm, original_run_lrm, get_default_lrm_config
+from lrm.agents.run_lrm import run_lrm, original_run_lrm
+from lrm.agents.config import LRMConfig
 from environments import CookieWorldEnv
 from environments.utils import PerfectRewardMachine, FlattenGridActions
 from environments.game import Game, GameParams
@@ -51,7 +52,7 @@ def save_results(results, run_time, session_name, seed):
 
 def check_reimplementation(n_runs=15):
 
-    lp = get_default_lrm_config()
+    lp = LRMConfig()
 
     for i in range(n_runs):
 
@@ -71,7 +72,7 @@ def check_reimplementation(n_runs=15):
 
 def test_minesweeper_lrm_minecount(n_runs=5):
 
-    lp = get_default_lrm_config()
+    lp = LRMConfig()
 
     for i in range(n_runs):
 

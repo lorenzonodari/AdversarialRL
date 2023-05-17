@@ -1,50 +1,58 @@
-class LearningParameters:
-    def __init__(self):
-        # default values
-        self.prioritized_replay = False
-        self.use_perfect_rm = False
+class LRMConfig:
+    def __init__(self, **kwargs):
 
-    def set_test_parameters(self, test_freq):
-        self.test_freq  = test_freq
+        # Initialize default value for every allowed configuration parameter
+        self._init_defaults()
 
-    def set_rm_learning(self, rm_init_steps, rm_u_max, rm_preprocess, rm_tabu_size, rm_lr_steps, rm_workers):
-        self.rm_init_steps = rm_init_steps # number of initial steps to run before learning the RM
-        self.rm_u_max      = rm_u_max     # max number of states for the reward machine
-        self.rm_preprocess = rm_preprocess # True for preprocessing the trace
-        self.rm_tabu_size  = rm_tabu_size # tabu list size
-        self.rm_lr_steps   = rm_lr_steps   # Number of learning steps for Tabu search
-        self.rm_workers    = rm_workers # number of threads 
+        # Update the value for explicitly specified parameters
+        for key, value in kwargs.items():
 
-    def set_rl_parameters(self, gamma, train_steps, episode_horizon, epsilon, max_learning_steps):
-        self.gamma = gamma
-        self.train_steps = train_steps
-        self.episode_horizon = episode_horizon
-        self.epsilon = epsilon
-        self.max_learning_steps = max_learning_steps
+            try:
+                current_value = getattr(self, key)
 
-    def set_perfect_rm(self):
-        # HACK: only for debugging purposes, we can see the performance that can be achieved by a handcrafted perfect RM
-        self.use_perfect_rm = True
+                # Type checking
+                if type(current_value) != type(value):
+                    raise ValueError(f'Invalid type for "{key}": got {type(value)}, need {type(current_value)}')
 
-    def set_prioritized_experience_replay(self, prioritized_replay_alpha=0.6, prioritized_replay_beta0=0.4,
-                                          prioritized_replay_beta_iters=None, prioritized_replay_eps=1e-6):
-        self.prioritized_replay = True
-        self.prioritized_replay_alpha = prioritized_replay_alpha
-        self.prioritized_replay_beta0 = prioritized_replay_beta0
-        self.prioritized_replay_beta_iters = prioritized_replay_beta_iters
-        self.prioritized_replay_eps = prioritized_replay_eps
+                setattr(self, key, value)
 
-    def set_deep_rl(self, lr, learning_starts, train_freq, target_network_update_freq, 
-                    buffer_size, batch_size, use_double_dqn, num_hidden_layers, num_neurons, use_qrm):
-        self.tabular_case = False
-        self.lr = lr
-        self.learning_starts = learning_starts
-        self.train_freq = train_freq
-        self.target_network_update_freq = target_network_update_freq
-        self.buffer_size = buffer_size
-        self.batch_size = batch_size
-        self.use_double_dqn = use_double_dqn
-        # Network architecture
-        self.num_hidden_layers = num_hidden_layers
-        self.num_neurons = num_neurons
-        self.use_qrm = use_qrm
+            except AttributeError as exception:
+                raise ValueError(f'Unknown configuration parameter: "{key}"') from exception
+
+    def _init_defaults(self):
+
+        # Reward Machines configuration
+        self.test_freq = int(1e4)  # Frequency of agent's performance testing - in number of learning steps
+        self.rm_init_steps = int(200e3)  # Number of initial warmup steps to run before learning the RM
+        self.rm_u_max = 10  # Max number of states that the RM is assumed to have
+        self.rm_preprocess = True  # If True, preprocess the traces before using them to learn the RM
+        self.rm_tabu_size = int(1e4)  # Tabu list size
+        self.rm_lr_steps = 100  # Number of learning steps for Tabu Search
+        self.rm_workers = 10  # Number of worker threads for Tabu Search
+        self.use_perfect_rm = False  # If True, use the handcrafted perfect RM instead of learning it
+
+        # Generic RL configuration
+        self.gamma = 0.9  # Discount factor - value in [0, 1]
+        self.train_steps = int(5e5)  # Number of training iterations
+        self.episode_horizon = int(5e3)  # Max allowed episode lenght - longer episodes are truncated
+        self.epsilon = 0.1  # Epsilon value for eps-greedy exploration strategy - value in [0,1]
+        self.max_learning_steps = int(5e5)  # Max number of learning steps for the policy
+
+        # Deep Q-Network configuration
+        self.lr = 5e-5  # Learning rate
+        self.learning_starts = int(5e4)  # Number of initial iterations before starting the DQN learning
+        self.train_freq = 1  # Frequency of DQN learning - in number of agent experiences
+        self.target_network_update_freq = 100  # Frequency of target network weight update
+        self.buffer_size = int(1e5)  #
+        self.batch_size = 32  # Batch size for the DQN
+        self.use_double_dqn = True  # If True, use the Double-DQN variant for learning the policies
+        self.num_hidden_layers = 5  # Number of hidden layers of the DQNs
+        self.num_neurons = 64  # Number of neurons in each hidden layer of the DQNs
+        self.use_qrm = True  # If True, use the QRM algorithm to train the DQNs
+
+        # Prioritized Experience Replay configuration
+        self.prioritized_replay = False  # If True, use Prioritized Experience Replay
+        self.prioritized_replay_alpha = 0.6  # Alpha parameter
+        self.prioritized_replay_beta0 = 0.4  # Initial value for beta parameter
+        self.prioritized_replay_beta_iters = None  # Number of iterations for each beta value
+        self.prioritized_replay_eps = 1e-6  # Epsilon parameter

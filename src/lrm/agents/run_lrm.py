@@ -4,7 +4,7 @@ import gymnasium as gym
 import numpy as np
 
 from ..reward_machines.reward_machine import RewardMachine
-from .config import LearningParameters
+from .config import LRMConfig
 from .dqn import DQN
 from .qrm import QRM
 
@@ -21,40 +21,7 @@ NOTE:
 """
 
 
-def get_default_lrm_config():
-
-    lp = LearningParameters()
-
-    lp.set_test_parameters(test_freq=int(1e4))
-
-    lp.set_rm_learning(rm_init_steps=200e3,
-                       rm_u_max=10,
-                       rm_preprocess=True,
-                       rm_tabu_size=10000,
-                       rm_lr_steps=100,
-                       rm_workers=8)
-
-    lp.set_rl_parameters(gamma=0.9,
-                         train_steps=int(5e5),
-                         episode_horizon=int(5e3),
-                         epsilon=0.1,
-                         max_learning_steps=int(5e5))
-
-    lp.set_deep_rl(lr=5e-5,
-                   learning_starts=50000,
-                   train_freq=1,
-                   target_network_update_freq=100,
-                   buffer_size=100000,
-                   batch_size=32,
-                   use_double_dqn=True,
-                   num_hidden_layers=5,
-                   num_neurons=64,
-                   use_qrm=True)
-
-    return lp
-
-
-def original_run_lrm(env, lp, rl='qrm', seed=None):
+def original_run_lrm(env, lp: LRMConfig, rl='qrm', seed=None):
 
     rm = RewardMachine(lp.rm_u_max, lp.rm_preprocess, lp.rm_tabu_size, lp.rm_workers, lp.rm_lr_steps,
                        env.get_perfect_rm(), lp.use_perfect_rm, seed=seed)
@@ -193,7 +160,7 @@ def original_run_lrm(env, lp, rl='qrm', seed=None):
     return train_rewards, rm_scores, rm.get_info()
 
 
-def run_lrm(env: gym.Env, lp: LearningParameters = None, *, seed=None):
+def run_lrm(env: gym.Env, lp: LRMConfig, *, seed=None):
     """
     Implementation of the Learning Reward Machine (LRM) algorithm by Icarte et al.
 
@@ -215,9 +182,6 @@ def run_lrm(env: gym.Env, lp: LearningParameters = None, *, seed=None):
     """
 
     assert isinstance(env.action_space, gym.spaces.Discrete), "Only Discrete action spaces are currently supported"
-
-    if lp is None:
-        lp = get_default_lrm_config()
 
     # Initialization
     rm = RewardMachine(lp.rm_u_max, lp.rm_preprocess, lp.rm_tabu_size, lp.rm_workers, lp.rm_lr_steps, env.get_perfect_rm(), lp.use_perfect_rm, seed=seed)  # TODO: Fix perfect RM
