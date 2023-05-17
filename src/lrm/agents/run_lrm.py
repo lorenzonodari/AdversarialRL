@@ -4,7 +4,7 @@ import gymnasium as gym
 import numpy as np
 
 from ..reward_machines.reward_machine import RewardMachine
-from .learning_parameters import LearningParameters
+from .config import LearningParameters
 from .dqn import DQN
 from .qrm import QRM
 
