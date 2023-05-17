@@ -52,7 +52,7 @@ def save_results(results, run_time, session_name, seed):
 
 def check_reimplementation(n_runs=15):
 
-    lp = LRMConfig()
+    config = LRMConfig()
 
     for i in range(n_runs):
 
@@ -60,19 +60,19 @@ def check_reimplementation(n_runs=15):
         env_orig = Game(GameParams(GridWorldParams('cookieworld', 'maps/cookie.txt', 0.05)))
 
         start = time.time()
-        orig_results = original_run_lrm(env_orig, lp, seed=i)
+        orig_results = original_run_lrm(env_orig, config, seed=i)
         run_time = int(time.time() - start)
         save_results(orig_results, run_time, 'orig_test', seed=i)
 
         start = time.time()
-        results = run_lrm(env, lp, seed=i)
+        results = run_lrm(env, config, seed=i)
         run_time = int(time.time() - start)
         save_results(results, run_time, 'impl_test', seed=i)
 
 
 def test_minesweeper_lrm_minecount(n_runs=5):
 
-    lp = LRMConfig()
+    config = LRMConfig()
 
     for i in range(n_runs):
 
@@ -82,7 +82,7 @@ def test_minesweeper_lrm_minecount(n_runs=5):
         env = Labeling(env, MineCountLF)
 
         start = time.time()
-        results = run_lrm(env, seed=i)
+        results = run_lrm(env, config, seed=i)
         run_time = int(time.time() - start)
         save_results(results, run_time, 'test_minesweeper_minecount', seed=i)
 
