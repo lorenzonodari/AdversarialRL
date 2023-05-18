@@ -3,7 +3,7 @@ import random
 import gymnasium as gym
 import numpy as np
 
-from ..reward_machines.reward_machine import RewardMachine
+from .reward_machines.reward_machine import RewardMachine
 from .config import LRMConfig
 from .dqn import DQN
 from .qrm import QRM
@@ -21,7 +21,7 @@ NOTE:
 """
 
 
-def original_run_lrm(env, config: LRMConfig, rl='qrm', seed=None):
+def original_lrm_implementation(env, config: LRMConfig, rl='qrm', seed=None):
 
     rm = RewardMachine(config.rm_u_max, config.rm_preprocess, config.rm_tabu_size, config.rm_workers, config.rm_lr_steps,
                        env.get_perfect_rm(), config.use_perfect_rm, seed=seed)

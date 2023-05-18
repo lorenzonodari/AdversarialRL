@@ -4,7 +4,7 @@ import numpy as np
 from .rl import RL
 from .qrm_buffer import ReplayBuffer, PrioritizedReplayBuffer
 from .dqn_network import create_net, create_target_updates
-from ..common.schedules import LinearSchedule
+from .common.schedules import LinearSchedule
 
 """
 Interface:

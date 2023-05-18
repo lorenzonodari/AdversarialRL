@@ -4,7 +4,7 @@ from .rl import RL
 from .dqn_network import create_net, create_target_updates
 from .dqn_buffer import ReplayBuffer, PrioritizedReplayBuffer
 from .feature_proxy import FeatureProxy
-from ..common.schedules import LinearSchedule
+from .common.schedules import LinearSchedule
 import random
 
 

@@ -2,7 +2,7 @@
 
 import numpy as np
 import random  # TODO: Implement proper seeding
-from ..common.segment_tree import SumSegmentTree, MinSegmentTree
+from .common.segment_tree import SumSegmentTree, MinSegmentTree
 
 
 class ReplayBuffer(object):
@@ -22,8 +22,8 @@ class ReplayBuffer(object):
     def __len__(self):
         return len(self._storage)
 
-    def add(self, s1, a, r, s2, done):
-        data = (s1, a, r, s2, done)
+    def add(self, s1, a, s2, rewards, next_policies, done, ignore):
+        data = (s1, a, s2, rewards, next_policies, done, ignore)
 
         if self._next_idx >= len(self._storage):
             self._storage.append(data)
@@ -32,39 +32,21 @@ class ReplayBuffer(object):
         self._next_idx = (self._next_idx + 1) % self._maxsize
 
     def _encode_sample(self, idxes):
-        S1, A, R, S2, DONE = [], [], [], [], []
+        S1, A, S2, Rs, NPs, DONE, IGNORE = [], [], [], [], [], [], []
         for i in idxes:
             data = self._storage[i]
-            s1, a, r, s2, done = data
+            s1, a, s2, rewards, next_policies, done, ignore = data
             S1.append(np.array(s1, copy=False))
             A.append(np.array(a, copy=False))
-            R.append(r)
             S2.append(np.array(s2, copy=False))
-            DONE.append(done)
-        return np.array(S1), np.array(A), np.array(R), np.array(S2), np.array(DONE)
+            Rs.append(np.array(rewards, copy=False))
+            NPs.append(np.array(next_policies, copy=False))
+            DONE.append(np.array(done, copy=False))
+            IGNORE.append(np.array(ignore, copy=False))
+        return np.array(S1), np.array(A), np.array(S2), np.array(Rs), np.array(NPs), np.array(DONE), np.array(IGNORE)
 
     def sample(self, batch_size):
-        """Sample a batch of experiences.
-
-        Parameters
-        ----------
-        batch_size: int
-            How many transitions to sample.
-
-        Returns
-        -------
-        obs_batch: np.array
-            batch of observations
-        act_batch: np.array
-            batch of actions executed given obs_batch
-        rew_batch: np.array
-            rewards received as results of executing act_batch
-        next_obs_batch: np.array
-            next set of observations seen after executing act_batch
-        done_mask: np.array
-            done_mask[i] = 1 if executing act_batch[i] resulted in
-            the end of an episode and 0 otherwise.
-        """
+        """Sample a batch of experiences."""
         idxes = [random.randint(0, len(self._storage) - 1) for _ in range(batch_size)]
         return self._encode_sample(idxes)
 
@@ -189,3 +171,5 @@ class PrioritizedReplayBuffer(ReplayBuffer):
             self._it_min[idx] = priority ** self._alpha
 
             self._max_priority = max(self._max_priority, priority)
+
+
