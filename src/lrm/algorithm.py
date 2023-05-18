@@ -349,3 +349,10 @@ class LRMAgent:
 
         # return the trainig rewards
         return train_rewards, rm_scores, self._rm.get_info()
+
+    def save(self):
+        """
+        Serialize the agent, saving the learned RM and the associated policies
+        """
+
+        # TODO: Implement
