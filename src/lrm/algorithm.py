@@ -281,9 +281,9 @@ class LRMAgent:
                 if self._policy is None:
                     print("Learning a self._policy for the current RM...")
                     if not self._config.use_qrm:
-                        self._policy = DQN(self._config, len(o1_features), env.action_space.n, rm, seed=sub_seeder.randint(0, int(4e9)))
+                        self._policy = DQN(self._config, len(o1_features), env.action_space.n, self._rm, seed=sub_seeder.randint(0, int(4e9)))
                     else:
-                        self._policy = QRM(self._config, len(o1_features), env.action_space.n, rm, seed=sub_seeder.randint(0, int(4e9)))
+                        self._policy = QRM(self._config, len(o1_features), env.action_space.n, self._rm, seed=sub_seeder.randint(0, int(4e9)))
 
                 # Select and execute an action using epsilon greedy
                 action = self._policy.get_best_action(o1_features, u1, self._config.epsilon)
