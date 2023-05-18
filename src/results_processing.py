@@ -58,7 +58,7 @@ def process_execution_results(session, execution):
         for row in reader:
             step, reward = row
             steps.append(int(step))
-            rewards.append(int(reward))
+            rewards.append(float(reward))
 
     plt.figure()
     seed = int(execution.strip('seed_'))
