@@ -175,170 +175,177 @@ def original_lrm_implementation(env: Game, config: LRMConfig, rl='qrm', seed=Non
     return train_rewards, rm_scores, rm.get_info()
 
 
-def run_lrm(env: gym.Env, config: LRMConfig, *, seed=None):
-    """
-    Implementation of the Learning Reward Machine (LRM) algorithm by Icarte et al.
+class LRMAgent:
 
-    This code is based on the original code kindly provided by the authors at:
-    https://bitbucket.org/RToroIcarte/lrm/src/master/
-    but it is modified in order to support arbitrary gymnasium environments.
+    def __init__(self, **kwargs):
 
-    NB: Usable environments must either:
+        self._config = LRMConfig(**kwargs)
+        self._rm = None
+        self._policy = None
 
-    - implement a labeling function internally and return its output at each step() via the info dict;
-    - be wrapped via the LabeledEnv wrapper (which implements the above constraint).
+    def run_lrm(self, env: gym.Env, *, seed=None):
+        """
+        Implementation of the Learning Reward Machine (LRM) algorithm by Icarte et al.
 
-    Moreover, the environment is assumed to have a Discrete action space.
+        This code is based on the original code kindly provided by the authors at:
+        https://bitbucket.org/RToroIcarte/lrm/src/master/
+        but it is modified in order to support arbitrary gymnasium environments.
 
-    :param env The gymnasium.Env to be used
-    :param seed The seed to be used for execution reproducibility
-    :param config The LearningParameters instance containing the desired algorithm configuration
-    :return The reward sequence obtained during training
-    """
+        NB: Usable environments must either:
 
-    assert isinstance(env.action_space, gym.spaces.Discrete), "Only Discrete action spaces are currently supported"
+        - implement a labeling function internally and return its output at each step() via the info dict;
+        - be wrapped via the LabeledEnv wrapper (which implements the above constraint).
 
-    # Initialization
-    rm = RewardMachine(config.rm_u_max, config.rm_preprocess, config.rm_tabu_size, config.rm_workers,
-                       config.rm_lr_steps, env.get_perfect_rm(), config.use_perfect_rm,
-                       seed=seed)  # TODO: Fix perfect RM
+        Moreover, the environment is assumed to have a Discrete action space.
 
-    policy = None
-    train_rewards = []
-    rm_scores = []
-    reward_total = 0
-    last_reward = 0
-    step = 0
+        :param env The gymnasium.Env to be used
+        :param seed The seed to be used for execution reproducibility
+        :return A tuple containing the list of rewards obtained during training, the list of RM scores and final RM
+        """
 
-    # Since we discard and recreate policies during execution, plus we don't want to
-    # always have the same seed for each of them, we need to make sure that the sequence of seeds
-    # is consistent, and depends on the seed given to the algorithm as a whole.
-    # Same reasoning applies to the seed given to the env.reset() function.
-    sub_seed = random.Random(seed).randint(0, int(4e9))
-    sub_seeder = random.Random(sub_seed)
+        assert isinstance(env.action_space, gym.spaces.Discrete), "Only Discrete action spaces are currently supported"
 
-    # Collecting random traces for learning the reward machine
-    print("Collecting random traces...")
-    while step < config.rm_init_steps:
+        # Initialization
+        self._rm = RewardMachine(self._config.rm_u_max, self._config.rm_preprocess, self._config.rm_tabu_size, self._config.rm_workers,
+                           self._config.rm_lr_steps, env.get_perfect_rm(), self._config.use_perfect_rm,
+                           seed=seed)  # TODO: Fix perfect RM
 
-        # Running an episode using a random policy
-        obs, info = env.reset(seed=sub_seeder.randint(0, int(4e9)))
-        trace = [(info["events"], 0.0)]
+        self._policy = None
+        train_rewards = []
+        rm_scores = []
+        reward_total = 0
+        last_reward = 0
+        step = 0
 
-        for _ in range(config.episode_horizon):
+        # Since we discard and recreate policies during execution, plus we don't want to
+        # always have the same seed for each of them, we need to make sure that the sequence of seeds
+        # is consistent, and depends on the seed given to the algorithm as a whole.
+        # Same reasoning applies to the seed given to the env.reset() function.
+        sub_seed = random.Random(seed).randint(0, int(4e9))
+        sub_seeder = random.Random(sub_seed)
 
-            # executing a random action
-            action = env.action_space.sample()
+        # Collecting random traces for learning the reward machine
+        print("Collecting random traces...")
+        while step < self._config.rm_init_steps:
 
-            obs, reward, terminated, truncated, info = env.step(action)
-            done = terminated or truncated
-            o2_events = info["events"]
-            reward_total += reward
-            trace.append((o2_events, reward))
-            step += 1
+            # Running an episode using a random self._policy
+            obs, info = env.reset(seed=sub_seeder.randint(0, int(4e9)))
+            trace = [(info["events"], 0.0)]
 
-            # Testing
-            if step % config.test_freq == 0:
-                print("Step: %d\tTrain: %0.1f" % (step, reward_total - last_reward))
-                train_rewards.append((step, reward_total - last_reward))
-                last_reward = reward_total
+            for _ in range(self._config.episode_horizon):
 
-            # Check for episode termination
-            if done or config.rm_init_steps <= step:
+                # executing a random action
+                action = env.action_space.sample()
+
+                obs, reward, terminated, truncated, info = env.step(action)
+                done = terminated or truncated
+                o2_events = info["events"]
+                reward_total += reward
+                trace.append((o2_events, reward))
+                step += 1
+
+                # Testing
+                if step % self._config.test_freq == 0:
+                    print("Step: %d\tTrain: %0.1f" % (step, reward_total - last_reward))
+                    train_rewards.append((step, reward_total - last_reward))
+                    last_reward = reward_total
+
+                # Check for episode termination
+                if done or self._config.rm_init_steps <= step:
+                    if done:
+                        self._rm.add_terminal_observations(o2_events)
+                    break
+
+            # Add this trace to the set of traces that we use to learn the RM
+            self._rm.add_trace(trace)
+
+        # Learn the reward machine using the collected traces
+        print("Learning a reward machines...")
+        _, info = self._rm.learn_the_reward_machine()
+        rm_scores.append((step,) + info)
+
+        # Start learning a self._policy for the current rm
+        finish_learning = False
+        while step < self._config.train_steps and not finish_learning:
+
+            o1, info = env.reset(seed=sub_seeder.randint(0, int(4e9)))
+            o1_features = np.concatenate((o1, info["event_features"]), axis=None)
+            o1_events = info["events"]
+            u1 = self._rm.get_initial_state()
+            trace = [(o1_events, 0.0)]
+            add_trace = False
+
+            for _ in range(self._config.episode_horizon):
+
+                # Re-initialize the self._policy if the RM changed
+                if self._policy is None:
+                    print("Learning a self._policy for the current RM...")
+                    if not self._config.use_qrm:
+                        self._policy = DQN(self._config, len(o1_features), env.action_space.n, rm, seed=sub_seeder.randint(0, int(4e9)))
+                    else:
+                        self._policy = QRM(self._config, len(o1_features), env.action_space.n, rm, seed=sub_seeder.randint(0, int(4e9)))
+
+                # Select and execute an action using epsilon greedy
+                action = self._policy.get_best_action(o1_features, u1, self._config.epsilon)
+                o2, reward, terminated, truncated, info = env.step(action)
+                o2_features = np.concatenate((o2, info["event_features"]), axis=None)
+                o2_events = info["events"]
+                done = terminated or truncated
+                u2 = self._rm.get_next_state(u1, o2_events)
+
+                # Update the number of steps and total reward
+                trace.append((o2_events, reward))
+                reward_total += reward
+                step += 1
+
+                # Update the current RM if needed
+                self._rm.update_rewards(u1, o2_events, reward)
                 if done:
-                    rm.add_terminal_observations(o2_events)
-                break
+                    self._rm.add_terminal_observations(o2_events)
 
-        # Add this trace to the set of traces that we use to learn the RM
-        rm.add_trace(trace)
+                # If o2 is impossible according to the current RM we must re-learn it
+                if self._rm.is_observation_impossible(u1, o1_events, o2_events):
+                    add_trace = True
 
-    # Learn the reward machine using the collected traces
-    print("Learning a reward machines...")
-    _, info = rm.learn_the_reward_machine()
-    rm_scores.append((step,) + info)
+                # Saving this transition
+                self._policy.add_experience(o1_events, o1_features, u1, action, reward, o2_events, o2_features, u2, float(done))
 
-    # Start learning a policy for the current rm
-    finish_learning = False
-    while step < config.train_steps and not finish_learning:
+                # Learning and updating the target networks (if needed)
+                self._policy.learn_if_needed()
 
-        o1, info = env.reset(seed=sub_seeder.randint(0, int(4e9)))
-        o1_features = np.concatenate((o1, info["event_features"]), axis=None)
-        o1_events = info["events"]
-        u1 = rm.get_initial_state()
-        trace = [(o1_events, 0.0)]
-        add_trace = False
+                # Testing
+                if step % self._config.test_freq == 0:
+                    print("Step: %d\tTrain: %0.1f" % (step, reward_total - last_reward))
+                    train_rewards.append((step, reward_total - last_reward))
+                    last_reward = reward_total
+                    # finishing the experiment if the max number of learning steps was reached
+                    if self._policy._get_step() > self._config.max_learning_steps:
+                        finish_learning = True
 
-        for _ in range(config.episode_horizon):
+                # Check if the episode finishes or the agent reaches the maximum number of training steps
+                if done or self._config.train_steps <= step or finish_learning:
+                    break
 
-            # Re-initialize the policy if the RM changed
-            if policy is None:
-                print("Learning a policy for the current RM...")
-                if not config.use_qrm:
-                    policy = DQN(config, len(o1_features), env.action_space.n, rm, seed=sub_seeder.randint(0, int(4e9)))
+                    # Move to the next state
+                o1_events, o1_features, u1 = o2_events, o2_features, u2
+
+            # If the trace isn't correctly predicted by the reward machine, add the trace and re-learn the machine
+            if add_trace and step < self._config.train_steps and not finish_learning:
+                print("Relearning the reward machine...")
+                self._rm.add_trace(trace)
+                same_rm, info = self._rm.learn_the_reward_machine()
+                rm_scores.append((step,) + info)
+
+                # If the RM changed, discard the old self._policy to learn a new one
+                if not same_rm:
+                    self._policy.close()
+                    self._policy = None
                 else:
-                    policy = QRM(config, len(o1_features), env.action_space.n, rm, seed=sub_seeder.randint(0, int(4e9)))
+                    print("the new RM is not better than the current RM!!")
 
-            # Select and execute an action using epsilon greedy
-            action = policy.get_best_action(o1_features, u1, config.epsilon)
-            o2, reward, terminated, truncated, info = env.step(action)
-            o2_features = np.concatenate((o2, info["event_features"]), axis=None)
-            o2_events = info["events"]
-            done = terminated or truncated
-            u2 = rm.get_next_state(u1, o2_events)
+        if self._policy is not None:
+            self._policy.close()
+            self._policy = None
 
-            # Update the number of steps and total reward
-            trace.append((o2_events, reward))
-            reward_total += reward
-            step += 1
-
-            # Update the current RM if needed
-            rm.update_rewards(u1, o2_events, reward)
-            if done:
-                rm.add_terminal_observations(o2_events)
-
-            # If o2 is impossible according to the current RM we must re-learn it
-            if rm.is_observation_impossible(u1, o1_events, o2_events):
-                add_trace = True
-
-            # Saving this transition
-            policy.add_experience(o1_events, o1_features, u1, action, reward, o2_events, o2_features, u2, float(done))
-
-            # Learning and updating the target networks (if needed)
-            policy.learn_if_needed()
-
-            # Testing
-            if step % config.test_freq == 0:
-                print("Step: %d\tTrain: %0.1f" % (step, reward_total - last_reward))
-                train_rewards.append((step, reward_total - last_reward))
-                last_reward = reward_total
-                # finishing the experiment if the max number of learning steps was reached
-                if policy._get_step() > config.max_learning_steps:
-                    finish_learning = True
-
-            # Check if the episode finishes or the agent reaches the maximum number of training steps
-            if done or config.train_steps <= step or finish_learning:
-                break
-
-                # Move to the next state
-            o1_events, o1_features, u1 = o2_events, o2_features, u2
-
-        # If the trace isn't correctly predicted by the reward machine, add the trace and re-learn the machine
-        if add_trace and step < config.train_steps and not finish_learning:
-            print("Relearning the reward machine...")
-            rm.add_trace(trace)
-            same_rm, info = rm.learn_the_reward_machine()
-            rm_scores.append((step,) + info)
-
-            # If the RM changed, discard the old policy to learn a new one
-            if not same_rm:
-                policy.close()
-                policy = None
-            else:
-                print("the new RM is not better than the current RM!!")
-
-    if policy is not None:
-        policy.close()
-        policy = None
-
-    # return the trainig rewards
-    return train_rewards, rm_scores, rm.get_info()
+        # return the trainig rewards
+        return train_rewards, rm_scores, self._rm.get_info()
