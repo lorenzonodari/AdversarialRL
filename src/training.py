@@ -3,17 +3,20 @@ import os
 import csv
 import multiprocessing
 
-from lrm.agents.run_lrm import run_lrm, original_run_lrm
-from lrm.agents.config import LRMConfig
+from lrm.algorithm import LRMAgent, original_lrm_implementation
+from lrm.config import LRMConfig
 from environments import CookieWorldEnv
 from environments.utils import PerfectRewardMachine, FlattenGridActions
 from environments.game import Game, GameParams
 from environments.grid_world import GridWorldParams
-from labeling import Labeling, MineCountLF
+from labeling import Labeling, MineCountLF, MineSuggestionLF
 
 import gymnasium as gym
 import tensorflow as tf
-import popgym
+from popgym.envs.minesweeper import MineSweeperMedium
+from popgym.wrappers import Antialias, PreviousAction
+
+# TODO: Test MineSweeper with new LF
 
 
 def save_results(results, run_time, session_name, seed):
@@ -52,39 +55,44 @@ def save_results(results, run_time, session_name, seed):
 
 def check_reimplementation(n_runs=15):
 
-    config = LRMConfig()
-
     for i in range(n_runs):
+
+        agent = LRMAgent()
+        config = LRMConfig()
 
         env = CookieWorldEnv(seed=i)
         env_orig = Game(GameParams(GridWorldParams('cookieworld', 'maps/cookie.txt', 0.05)))
 
         start = time.time()
-        orig_results = original_run_lrm(env_orig, config, seed=i)
+        orig_results = original_lrm_implementation(env_orig, config, seed=i)
         run_time = int(time.time() - start)
         save_results(orig_results, run_time, 'orig_test', seed=i)
 
         start = time.time()
-        results = run_lrm(env, config, seed=i)
+        results = agent.run_lrm(env, seed=i)
         run_time = int(time.time() - start)
         save_results(results, run_time, 'impl_test', seed=i)
 
 
-def test_minesweeper_lrm_minecount(n_runs=5):
+def test_minesweeper_lrm(n_runs=5):
 
-    config = LRMConfig()
+    for labeling in [MineSuggestionLF, MineCountLF]:
 
-    for i in range(n_runs):
+        for i in range(n_runs):
 
-        env = gym.make('popgym-MineSweeperMedium-v0')
-        env = FlattenGridActions(env)
-        env = PerfectRewardMachine(env, {})
-        env = Labeling(env, MineCountLF)
+            agent = LRMAgent()
 
-        start = time.time()
-        results = run_lrm(env, config, seed=i)
-        run_time = int(time.time() - start)
-        save_results(results, run_time, 'test_minesweeper_minecount', seed=i)
+            env = MineSweeperMedium()
+            env = PreviousAction(env)
+            env = Antialias(env)
+            env = Labeling(env, labeling)
+            env = FlattenGridActions(env)
+            env = PerfectRewardMachine(env, {})
+
+            start = time.time()
+            results = agent.run_lrm(env, seed=i)
+            run_time = int(time.time() - start)
+            save_results(results, run_time, f'test_minesweeper_{type(labeling).__name__}', seed=i)
 
 
 if __name__ == '__main__':
@@ -92,5 +100,7 @@ if __name__ == '__main__':
     tf.compat.v1.disable_v2_behavior()  # TODO: Find a better place (Or port to tf2 directly)
     multiprocessing.set_start_method('fork')  # TODO: Find a better place
 
-    test_minesweeper_lrm_minecount()
+    test_minesweeper_lrm()
+
+    # TODO: Implement proper CLI interface for ease-of-use
 
