@@ -138,3 +138,53 @@ class MineCountLF(LabelingFunction):
         features[mines_number] = 1.0
         return features
 
+
+class MineSuggestionLF(LabelingFunction):
+    """
+    Labeling function for MineSweeper to produce events the current state of the environment.
+
+    The suggestion is made based on simple observations relating to the possible presence of shared neighbors in the
+    last two observations, which could indicate some overlap between the mine counts that were detected.
+    # TODO: Experiment with longer estimation windows? Possible labeling function generalization
+    """
+
+    def get_events(self, obs, action, new_obs):
+
+        # Compute Manhattan distance between last two chosen cells
+        last_row, last_col = obs[1]
+        new_row, new_col = action
+        distance = abs(last_row - new_row) + abs(last_col - new_col)
+
+        # Direct neighbors: 4 shared cells
+        if distance == 1:
+
+            # abstrac obs format: Shared neighbors + location_1 neighbor mines + location_2 neighbor mines
+            obs = f"4{obs[0]}{new_obs[0]}"
+
+        # The cells are horizontal/vertical indirect neighbors, 3 shared cells
+        elif distance == 2 and (last_row == new_row or last_col == new_col):
+
+            obs = f"3{obs[0]}{new_obs[0]}"
+
+        # The cells are diagonal neighbors: 2 shared cells
+        elif distance == 2:
+
+            obs = f"2{obs[0]}{new_obs[0]}"
+
+        # Indirect diagonal neighbors: 1 shared cell
+        elif distance == 3:
+
+            obs = f"1{obs[0]}{new_obs[0]}"
+
+        # The two cells share no neighbors, we have no useful information
+        else:
+            return ""
+
+    def get_event_features(self, events):
+
+        shared_cells = int(events[0])
+        mines_a = int(events[1])
+        mines_b = int(events[2])
+
+        features = np.array([shared_cells, mines_a, mines_b], dtype=np.uint8)
+        return features
