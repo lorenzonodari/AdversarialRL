@@ -228,7 +228,7 @@ class LRMAgent:
         print("Collecting random traces...")
         while step < self._config.rm_init_steps:
 
-            # Running an episode using a random self._policy
+            # Running an episode using a random policy
             obs, info = env.reset(seed=sub_seeder.randint(0, int(4e9)))
             trace = [(info["events"], 0.0)]
 
@@ -277,9 +277,9 @@ class LRMAgent:
 
             for _ in range(self._config.episode_horizon):
 
-                # Re-initialize the self._policy if the RM changed
+                # Re-initialize the policy if the RM changed
                 if self._policy is None:
-                    print("Learning a self._policy for the current RM...")
+                    print("Learning a policy for the current RM...")
                     if not self._config.use_qrm:
                         self._policy = DQN(self._config, len(o1_features), env.action_space.n, self._rm, seed=sub_seeder.randint(0, int(4e9)))
                     else:
@@ -326,7 +326,7 @@ class LRMAgent:
                 if done or self._config.train_steps <= step or finish_learning:
                     break
 
-                    # Move to the next state
+                # Move to the next state
                 o1_events, o1_features, u1 = o2_events, o2_features, u2
 
             # If the trace isn't correctly predicted by the reward machine, add the trace and re-learn the machine
@@ -336,7 +336,7 @@ class LRMAgent:
                 same_rm, info = self._rm.learn_the_reward_machine()
                 rm_scores.append((step,) + info)
 
-                # If the RM changed, discard the old self._policy to learn a new one
+                # If the RM changed, discard the old policy to learn a new one
                 if not same_rm:
                     self._policy.close()
                     self._policy = None
@@ -347,7 +347,6 @@ class LRMAgent:
             self._policy.close()
             self._policy = None
 
-        # return the trainig rewards
         return train_rewards, rm_scores, self._rm.get_info()
 
     def save(self):
