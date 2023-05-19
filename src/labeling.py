@@ -162,23 +162,23 @@ class MineSuggestionLF(LabelingFunction):
         # Direct neighbors: 4 shared cells
         if distance == 1:
 
-            # abstrac obs format: Shared neighbors + location_1 neighbor mines + location_2 neighbor mines
-            obs = f"4{obs[0]}{new_obs[0]}"
+            # abstract obs format: Shared neighbors + location_1 neighbor mines + location_2 neighbor mines
+            return f"4{obs[0]}{new_obs[0]}"
 
         # The cells are horizontal/vertical indirect neighbors, 3 shared cells
         elif distance == 2 and (last_row == new_row or last_col == new_col):
 
-            obs = f"3{obs[0]}{new_obs[0]}"
+            return f"3{obs[0]}{new_obs[0]}"
 
         # The cells are diagonal neighbors: 2 shared cells
         elif distance == 2:
 
-            obs = f"2{obs[0]}{new_obs[0]}"
+            return f"2{obs[0]}{new_obs[0]}"
 
         # Indirect diagonal neighbors: 1 shared cell
         elif distance == 3:
 
-            obs = f"1{obs[0]}{new_obs[0]}"
+            return f"1{obs[0]}{new_obs[0]}"
 
         # The two cells share no neighbors, we have no useful information
         else:
