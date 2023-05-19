@@ -150,6 +150,10 @@ class MineSuggestionLF(LabelingFunction):
 
     def get_events(self, obs, action, new_obs):
 
+        # Check for initial observation
+        if obs is None:
+            return ""
+
         # Compute Manhattan distance between last two chosen cells
         last_row, last_col = obs[1]
         new_row, new_col = action
@@ -181,6 +185,9 @@ class MineSuggestionLF(LabelingFunction):
             return ""
 
     def get_event_features(self, events):
+
+        if events == "":
+            return np.zeros(3, dtype=np.uint8)
 
         shared_cells = int(events[0])
         mines_a = int(events[1])
