@@ -80,7 +80,9 @@ def test_minesweeper_lrm(n_runs=5):
 
         for i in range(n_runs):
 
-            agent = LRMAgent()
+            agent = LRMAgent(
+                rm_lr_steps=10
+            )
 
             env = MineSweeperMedium()
             env = PreviousAction(env)
