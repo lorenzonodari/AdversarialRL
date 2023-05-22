@@ -16,8 +16,6 @@ import tensorflow as tf
 from popgym.envs.minesweeper import MineSweeperMedium
 from popgym.wrappers import Antialias, PreviousAction
 
-# TODO: Test MineSweeper with new LF
-
 
 def save_results(results, run_time, session_name, seed):
 
@@ -81,7 +79,10 @@ def test_minesweeper_lrm(n_runs=5):
         for i in range(n_runs):
 
             agent = LRMAgent(
-                rm_lr_steps=10
+                rm_u_max=15,
+                rm_lr_steps=10,
+                rm_tabu_size=int(1e5),
+
             )
 
             env = MineSweeperMedium()
@@ -94,7 +95,7 @@ def test_minesweeper_lrm(n_runs=5):
             start = time.time()
             results = agent.run_lrm(env, seed=i)
             run_time = int(time.time() - start)
-            save_results(results, run_time, f'test_minesweeper_{type(labeling).__name__}', seed=i)
+            save_results(results, run_time, f'test_minesweeper_{labeling.__name__}', seed=i)
 
 
 if __name__ == '__main__':
