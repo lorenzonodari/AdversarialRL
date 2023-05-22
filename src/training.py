@@ -79,7 +79,7 @@ def test_minesweeper_lrm(n_runs=5):
         for i in range(n_runs):
 
             agent = LRMAgent(
-                rm_u_max=15,
+                rm_u_max=5 + 2 * i,
                 rm_lr_steps=10,
                 rm_tabu_size=int(1e5),
 
