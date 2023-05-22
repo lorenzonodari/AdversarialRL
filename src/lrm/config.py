@@ -11,7 +11,7 @@ class LRMConfig:
                 current_value = getattr(self, key)
 
                 # Type checking
-                if type(current_value) != type(value):
+                if type(current_value) is not type(value):
                     raise ValueError(f'Invalid type for "{key}": got {type(value)}, need {type(current_value)}')
 
                 setattr(self, key, value)

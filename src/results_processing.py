@@ -86,7 +86,7 @@ def process_session_results(sessions: Union[list, str]) -> None:
     :param sessions: The name of a training session, or a list of them, for which to process results
     """
 
-    if type(sessions) == str:
+    if isinstance(sessions, str):
         sessions = [sessions]
 
     for session in sessions:

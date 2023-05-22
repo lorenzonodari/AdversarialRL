@@ -271,7 +271,7 @@ class LRMAgent:
             o1, info = env.reset(seed=sub_seeder.randint(0, int(4e9)))
 
             # Handle tuple observation spaces
-            if type(o1) == tuple:
+            if isinstance(o1, tuple):
                 o1_features = np.concatenate((*o1, info["event_features"]), axis=None)
             else:
                 o1_features = np.concatenate((o1, info["event_features"]), axis=None)
@@ -296,7 +296,7 @@ class LRMAgent:
                 o2, reward, terminated, truncated, info = env.step(action)
 
                 # Handle tuple observation spaces
-                if type(o2) == tuple:
+                if isinstance(o2, tuple):
                     o2_features = np.concatenate((*o2, info["event_features"]), axis=None)
                 else:
                     o2_features = np.concatenate((o2, info["event_features"]), axis=None)
