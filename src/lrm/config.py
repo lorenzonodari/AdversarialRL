@@ -33,10 +33,10 @@ class LRMConfig:
 
         # Generic RL configuration
         self.gamma = 0.9  # Discount factor - value in [0, 1]
-        self.train_steps = int(5e5)  # Number of training iterations
+        self.train_steps = int(5e5)  # Total number of training steps to execute
         self.episode_horizon = int(5e3)  # Max allowed episode lenght - longer episodes are truncated
         self.epsilon = 0.1  # Epsilon value for eps-greedy exploration strategy - value in [0,1]
-        self.max_learning_steps = int(5e5)  # Max number of learning steps for the policy
+        self.max_learning_steps = int(5e5)  # Max number of learning steps for a single policy
 
         # Deep Q-Network configuration
         self.lr = 5e-5  # Learning rate
