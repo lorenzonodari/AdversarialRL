@@ -126,7 +126,7 @@ class MineCountLF(LabelingFunction):
         :return: The events that hold true in the new state of the environment, as observable by the agent
         """
 
-        return str(new_obs)
+        return str(new_obs[0])
 
     def get_event_features(self, events):
 
