@@ -269,7 +269,13 @@ class LRMAgent:
         while step < self._config.train_steps and not finish_learning:
 
             o1, info = env.reset(seed=sub_seeder.randint(0, int(4e9)))
-            o1_features = np.concatenate((o1, info["event_features"]), axis=None)
+
+            # Handle tuple observation spaces
+            if type(o1) == tuple:
+                o1_features = np.concatenate((*o1, info["event_features"]), axis=None)
+            else:
+                o1_features = np.concatenate((o1, info["event_features"]), axis=None)
+
             o1_events = info["events"]
             u1 = self._rm.get_initial_state()
             trace = [(o1_events, 0.0)]
@@ -288,7 +294,13 @@ class LRMAgent:
                 # Select and execute an action using epsilon greedy
                 action = self._policy.get_best_action(o1_features, u1, self._config.epsilon)
                 o2, reward, terminated, truncated, info = env.step(action)
-                o2_features = np.concatenate((o2, info["event_features"]), axis=None)
+
+                # Handle tuple observation spaces
+                if type(o2) == tuple:
+                    o2_features = np.concatenate((*o2, info["event_features"]), axis=None)
+                else:
+                    o2_features = np.concatenate((o2, info["event_features"]), axis=None)
+
                 o2_events = info["events"]
                 done = terminated or truncated
                 u2 = self._rm.get_next_state(u1, o2_events)
