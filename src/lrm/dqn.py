@@ -30,13 +30,13 @@ class DQN(RL):
         self._create_network()
 
         # create experience replay buffer
-        if self.lp.prioritized_replay:
-            self.replay_buffer = PrioritizedReplayBuffer(lp.buffer_size, alpha=lp.prioritized_replay_alpha)
-            if lp.prioritized_replay_beta_iters is None:
-                lp.prioritized_replay_beta_iters = lp.train_steps
-            self.beta_schedule = LinearSchedule(lp.prioritized_replay_beta_iters, initial_p=lp.prioritized_replay_beta0, final_p=1.0)
+        if self.lp["prioritized_replay"]:
+            self.replay_buffer = PrioritizedReplayBuffer(lp["buffer_size"], alpha=lp["prioritized_replay_alpha"])
+            if lp["prioritized_replay_beta_iters"] is None:
+                lp["prioritized_replay_beta_iters"] = lp["train_steps"]
+            self.beta_schedule = LinearSchedule(lp["prioritized_replay_beta_iters"], initial_p=lp["prioritized_replay_beta0"], final_p=1.0)
         else:
-            self.replay_buffer = ReplayBuffer(lp.buffer_size)
+            self.replay_buffer = ReplayBuffer(lp["buffer_size"])
             self.beta_schedule = None
 
         # count of the number of environmental steps
@@ -62,12 +62,12 @@ class DQN(RL):
         with tf.variable_scope(self.policy_name): # helps to give different names to this variables for this network
             # Defining regular and target neural nets
             with tf.variable_scope("q_network") as scope:
-                q_values, q_values_weights = create_net(self.s1, total_features, total_actions, self.lp.num_neurons, self.lp.num_hidden_layers)
-                if self.lp.use_double_dqn:
+                q_values, q_values_weights = create_net(self.s1, total_features, total_actions, self.lp["num_neurons"], self.lp["num_hidden_layers"])
+                if self.lp["use_double_dqn"]:
                     scope.reuse_variables()
-                    q2_values, _ = create_net(self.s2, total_features, total_actions, self.lp.num_neurons, self.lp.num_hidden_layers)
+                    q2_values, _ = create_net(self.s2, total_features, total_actions, self.lp["num_neurons"], self.lp["num_hidden_layers"])
             with tf.variable_scope("q_target"):
-                q_target, q_target_weights = create_net(self.s2, total_features, total_actions, self.lp.num_neurons, self.lp.num_hidden_layers)
+                q_target, q_target_weights = create_net(self.s2, total_features, total_actions, self.lp["num_neurons"], self.lp["num_hidden_layers"])
             self.update_target = create_target_updates(q_values_weights, q_target_weights)
 
             # Q_values -> get optimal actions
@@ -77,7 +77,7 @@ class DQN(RL):
             action_mask = tf.one_hot(indices=self.a, depth=total_actions, dtype=tf.float64)
             q_current = tf.reduce_sum(tf.multiply(q_values, action_mask), 1)
 
-            if self.lp.use_double_dqn:
+            if self.lp["use_double_dqn"]:
                 # DDQN
                 best_action_mask = tf.one_hot(indices=tf.argmax(q2_values, 1), depth=total_actions, dtype=tf.float64)
                 q_max = tf.reduce_sum(tf.multiply(q_target, best_action_mask), 1)
@@ -87,9 +87,9 @@ class DQN(RL):
 
             # Computing td-error and loss function
             q_max = q_max * (1.0-self.done) # dead ends must have q_max equal to zero
-            q_target_value = self.r + self.lp.gamma * q_max
+            q_target_value = self.r + self.lp["gamma"] * q_max
             q_target_value = tf.stop_gradient(q_target_value)
-            if self.lp.prioritized_replay: 
+            if self.lp["prioritized_replay"]:
                 # prioritized experience replay
                 self.td_error = q_current - q_target_value
                 huber_loss = 0.5 * tf.square(self.td_error) # without clipping
@@ -99,15 +99,15 @@ class DQN(RL):
                 loss = 0.5 * tf.reduce_sum(tf.square(q_current - q_target_value))
             
             # Defining the optimizer
-            optimizer = tf.train.AdamOptimizer(learning_rate=self.lp.lr)
+            optimizer = tf.train.AdamOptimizer(learning_rate=self.lp["lr"])
             self.train = optimizer.minimize(loss=loss)
             
         # Initializing the network values
         self.sess.run(tf.variables_initializer(self._get_network_variables()))
-        self._update_target_network() #copying weights to target net
+        self._update_target_network()  # Copying weights to target net
 
     def _train(self, s1, a, r, s2, done, IS_weights):
-        if self.lp.prioritized_replay: 
+        if self.lp["prioritized_replay"]:
             _, td_errors = self.sess.run([self.train,self.td_error], {self.s1: s1, self.a: a, self.r: r, self.s2: s2, self.done: done, self.IS_weights: IS_weights})
         else:
             self.sess.run(self.train, {self.s1: s1, self.a: a, self.r: r, self.s2: s2, self.done: done})
@@ -121,16 +121,16 @@ class DQN(RL):
         self.step += 1
 
     def _learn(self):
-        if self.lp.prioritized_replay:
-            experience = self.replay_buffer.sample(self.lp.batch_size, beta=self.beta_schedule.value(self._get_step()))
+        if self.lp["prioritized_replay"]:
+            experience = self.replay_buffer.sample(self.lp["batch_size"], beta=self.beta_schedule.value(self._get_step()))
             s1, a, r, s2, done, weights, batch_idxes = experience
         else:
-            s1, a, r, s2, done = self.replay_buffer.sample(self.lp.batch_size)
+            s1, a, r, s2, done = self.replay_buffer.sample(self.lp["batch_size"])
             weights, batch_idxes = None, None
 
         td_errors = self._train(s1, a, r, s2, done, weights) # returns the absolute td_error
-        if self.lp.prioritized_replay:
-            new_priorities = np.abs(td_errors) + self.lp.prioritized_replay_eps
+        if self.lp["prioritized_replay"]:
+            new_priorities = np.abs(td_errors) + self.lp["prioritized_replay_eps"]
             self.replay_buffer.update_priorities(batch_idxes, new_priorities)
 
     def _update_target_network(self):
@@ -141,11 +141,11 @@ class DQN(RL):
 
     def learn_if_needed(self):
         # Learning
-        if self._get_step() > self.lp.learning_starts and self._get_step() % self.lp.train_freq == 0:
+        if self._get_step() > self.lp["learning_starts"] and self._get_step() % self.lp["train_freq"] == 0:
             self._learn()
 
         # Updating the target networks
-        if self._get_step() > self.lp.learning_starts and self._get_step() % self.lp.target_network_update_freq == 0:
+        if self._get_step() > self.lp["learning_starts"] and self._get_step() % self.lp["target_network_update_freq"] == 0:
             self._update_target_network()
 
     def add_experience(self, o1_events, o1_features, u1, a, reward, o2_events, o2_features, u2, done):
@@ -155,7 +155,7 @@ class DQN(RL):
         self._add_step()
 
     def get_best_action(self, s1, u1, epsilon):
-        if self._get_step() <= self.lp.learning_starts or self._random.random() < epsilon:
+        if self._get_step() <= self.lp["learning_starts"] or self._random.random() < epsilon:
             # epsilon greedy
             return self._random.randrange(self.num_actions)
         s1 = self.feature_proxy.add_state_features(s1, u1).reshape((1,self.num_features))

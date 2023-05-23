@@ -36,13 +36,13 @@ class QRM(RL):
         self._create_network()
 
         # create experience replay buffer
-        if self.lp.prioritized_replay:
-            self.replay_buffer = PrioritizedReplayBuffer(lp.buffer_size, alpha=lp.prioritized_replay_alpha)
-            if lp.prioritized_replay_beta_iters is None:
-                lp.prioritized_replay_beta_iters = lp.train_steps
-            self.beta_schedule = LinearSchedule(lp.prioritized_replay_beta_iters, initial_p=lp.prioritized_replay_beta0, final_p=1.0)
+        if self.lp["prioritized_replay"]:
+            self.replay_buffer = PrioritizedReplayBuffer(lp["buffer_size"], alpha=lp["prioritized_replay_alpha"])
+            if lp["prioritized_replay_beta_iters"] is None:
+                lp["prioritized_replay_beta_iters"] = lp["train_steps"]
+            self.beta_schedule = LinearSchedule(lp["prioritized_replay_beta_iters"], initial_p=lp["prioritized_replay_beta0"], final_p=1.0)
         else:
-            self.replay_buffer = ReplayBuffer(lp.buffer_size)
+            self.replay_buffer = ReplayBuffer(lp["buffer_size"])
             self.beta_schedule = None
 
         # count of the number of environmental steps
@@ -86,7 +86,7 @@ class QRM(RL):
     def _reconnect(self):
         # Redefining connections between the different DQN networks
         n_policies = len(self.policies)
-        batch_size = self.lp.batch_size
+        batch_size = self.lp["batch_size"]
         
         # concatenating q_target of every policy
         Q_target_all = tf.concat([self.policies[i].get_q_target_value() for i in range(len(self.policies))], 1)
@@ -113,12 +113,12 @@ class QRM(RL):
         self.train = []
         for i in range(n_policies):
             p = self.policies[i]
-            if self.lp.prioritized_replay:
+            if self.lp["prioritized_replay"]:
                 self.train.append(p.td_error)
             self.train.append(p.train)
 
     def get_best_action(self, s1, u1, epsilon):
-        if self._get_step() <= self.lp.learning_starts or self._random.random() < epsilon:
+        if self._get_step() <= self.lp["learning_starts"] or self._random.random() < epsilon:
             # epsilon greedy
             return self._random.randrange(self.num_actions)
         policy = self.policies[u1]
@@ -130,22 +130,22 @@ class QRM(RL):
         values = {self.s1: s1, self.a: a, self.s2: s2, self.rewards: rewards, self.next_policies: next_policies, 
                   self.done: done, self.ignore: ignore, self.IS_weights: IS_weights}
         res = self.sess.run(self.train, values)
-        if self.lp.prioritized_replay:
+        if self.lp["prioritized_replay"]:
             # Computing new priorities (max of the absolute td-errors)
             td_errors = np.array([np.abs(td_error) for td_error in res if td_error is not None])
             td_errors_max = np.max(td_errors, axis=0) 
             return td_errors_max
 
     def _learn(self):
-        if self.lp.prioritized_replay:
-            experience = self.replay_buffer.sample(self.lp.batch_size, beta=self.beta_schedule.value(self._get_step()))
+        if self.lp["prioritized_replay"]:
+            experience = self.replay_buffer.sample(self.lp["batch_size"], beta=self.beta_schedule.value(self._get_step()))
             s1, a, s2, rewards, next_policies, done, ignore, weights, batch_idxes = experience
         else:
-            s1, a, s2, rewards, next_policies, done, ignore = self.replay_buffer.sample(self.lp.batch_size)
+            s1, a, s2, rewards, next_policies, done, ignore = self.replay_buffer.sample(self.lp["batch_size"])
             weights, batch_idxes = None, None
         td_errors = self._train(s1, a, s2, rewards, next_policies, done, ignore, weights) # returns the absolute td_error
-        if self.lp.prioritized_replay:
-            new_priorities = np.abs(td_errors) + self.lp.prioritized_replay_eps
+        if self.lp["prioritized_replay"]:
+            new_priorities = np.abs(td_errors) + self.lp["prioritized_replay_eps"]
             self.replay_buffer.update_priorities(batch_idxes, new_priorities)
 
     def _update_target_network(self):
@@ -154,11 +154,11 @@ class QRM(RL):
 
     def learn_if_needed(self): 
         # Learning
-        if self._get_step() > self.lp.learning_starts and self._get_step() % self.lp.train_freq == 0:
+        if self._get_step() > self.lp["learning_starts"] and self._get_step() % self.lp["train_freq"] == 0:
             self._learn()
 
         # Updating the target networks
-        if self._get_step() > self.lp.learning_starts and self._get_step() % self.lp.target_network_update_freq == 0:
+        if self._get_step() > self.lp["learning_starts"] and self._get_step() % self.lp["target_network_update_freq"] == 0:
             self._update_target_network()
 
     def add_experience(self, o1_events, o1_features, u1, a, reward, o2_events, o2_features, u2, done):
@@ -206,12 +206,12 @@ class PolicyDQN:
         with tf.variable_scope(self.scope_name): # helps to give different names to this variables for this network
             # Defining regular and target neural nets
             with tf.variable_scope("q_network") as scope:
-                q_values, q_values_weights = create_net(self.s1, self.n_features, self.n_actions, self.lp.num_neurons, self.lp.num_hidden_layers)
-                if self.lp.use_double_dqn:
+                q_values, q_values_weights = create_net(self.s1, self.n_features, self.n_actions, self.lp["num_neurons"], self.lp["num_hidden_layers"])
+                if self.lp["use_double_dqn"]:
                     scope.reuse_variables()
-                    q2_values, _ = create_net(self.s2, self.n_features, self.n_actions, self.lp.num_neurons, self.lp.num_hidden_layers)
+                    q2_values, _ = create_net(self.s2, self.n_features, self.n_actions, self.lp["num_neurons"], self.lp["num_hidden_layers"])
             with tf.variable_scope("q_target"):
-                q_target, q_target_weights = create_net(self.s2, self.n_features, self.n_actions, self.lp.num_neurons, self.lp.num_hidden_layers)
+                q_target, q_target_weights = create_net(self.s2, self.n_features, self.n_actions, self.lp["num_neurons"], self.lp["num_hidden_layers"])
             update_target = create_target_updates(q_values_weights, q_target_weights)
 
             # Q_values -> get optimal actions
@@ -222,7 +222,7 @@ class PolicyDQN:
             q_current = tf.reduce_sum(tf.multiply(q_values, action_mask), 1)
             
             # getting the target q-value for the best next action
-            if self.lp.use_double_dqn:
+            if self.lp["use_double_dqn"]:
                 # DDQN
                 best_action_mask = tf.one_hot(indices=tf.argmax(q2_values, 1), depth=self.n_actions, dtype=tf.float64)
                 q_target_value = tf.reshape(tf.reduce_sum(tf.multiply(q_target, best_action_mask), 1), [-1,1])
@@ -243,11 +243,11 @@ class PolicyDQN:
         with tf.variable_scope(self.scope_name): # helps to give different names to this variables for this network
             # computing td-error 'r + gamma * max Q_t'
             q_max    = q_target * (1.0 - done)
-            td_error = self.q_current - (reward + self.lp.gamma * q_max)
+            td_error = self.q_current - (reward + self.lp["gamma"] * q_max)
             self.td_error = td_error * (1.0 - ignore) # setting to zero all the experiences that should be ignored
 
             # setting loss function
-            if self.lp.prioritized_replay: 
+            if self.lp["prioritized_replay"]:
                 # prioritized experience replay
                 huber_loss = 0.5 * tf.square(self.td_error) # without clipping
                 loss = tf.reduce_mean(self.IS_weights * huber_loss) # weights fix bias in case of using priorities
@@ -255,7 +255,7 @@ class PolicyDQN:
                 # standard experience replay
                 loss = 0.5 * tf.reduce_sum(tf.square(self.td_error)) 
             
-            optimizer = tf.train.AdamOptimizer(learning_rate=self.lp.lr)
+            optimizer = tf.train.AdamOptimizer(learning_rate=self.lp["lr"])
             self.train = optimizer.minimize(loss=loss)
 
     def initialize_variables(self):

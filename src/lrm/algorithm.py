@@ -37,9 +37,9 @@ def original_lrm_implementation(env: Game, config: LRMConfig, rl='qrm', seed=Non
     :return: A tuple containing the list of obtained rewards, RM scores and final learned RM
     """
 
-    rm = RewardMachine(config.rm_u_max, config.rm_preprocess, config.rm_tabu_size, config.rm_workers,
-                       config.rm_lr_steps,
-                       env.get_perfect_rm(), config.use_perfect_rm, seed=seed)
+    rm = RewardMachine(config["rm_u_max"], config["rm_preprocess"], config["rm_tabu_size"], config["rm_workers"],
+                       config["rm_lr_steps"],
+                       env.get_perfect_rm(), config["use_perfect_rm"], seed=seed)
     actions = env.get_actions()
     policy = None
     train_rewards = []
@@ -57,11 +57,11 @@ def original_lrm_implementation(env: Game, config: LRMConfig, rl='qrm', seed=Non
 
     # Collecting random traces for learning the reward machine
     print("Collecting random traces...")
-    while step < config.rm_init_steps:
+    while step < config["rm_init_steps"]:
         # running an episode using a random policy
         env.restart(seed=sub_seeder.randint(0, int(4e9)))
         trace = [(env.get_events(), 0.0)]
-        for _ in range(config.episode_horizon):
+        for _ in range(config["episode_horizon"]):
             # executing a random action
             a = rng.choice(actions)
             reward, done = env.execute_action(a)
@@ -70,12 +70,12 @@ def original_lrm_implementation(env: Game, config: LRMConfig, rl='qrm', seed=Non
             trace.append((o2_events, reward))
             step += 1
             # Testing
-            if step % config.test_freq == 0:
+            if step % config["test_freq"] == 0:
                 print("Step: %d\tTrain: %0.1f" % (step, reward_total - last_reward))
                 train_rewards.append((step, reward_total - last_reward))
                 last_reward = reward_total
             # checking if the episode finishes
-            if done or config.rm_init_steps <= step:
+            if done or config["rm_init_steps"] <= step:
                 if done: rm.add_terminal_observations(o2_events)
                 break
                 # adding this trace to the set of traces that we use to learn the rm
@@ -88,7 +88,7 @@ def original_lrm_implementation(env: Game, config: LRMConfig, rl='qrm', seed=Non
 
     # Start learning a policy for the current rm
     finish_learning = False
-    while step < config.train_steps and not finish_learning:
+    while step < config["train_steps"] and not finish_learning:
         env.restart()
         o1_events = env.get_events()
         o1_features = env.get_features()
@@ -96,7 +96,7 @@ def original_lrm_implementation(env: Game, config: LRMConfig, rl='qrm', seed=Non
         trace = [(o1_events, 0.0)]
         add_trace = False
 
-        for _ in range(config.episode_horizon):
+        for _ in range(config["episode_horizon"]):
 
             # reinitializing the policy if the rm changed
             if policy is None:
@@ -109,7 +109,7 @@ def original_lrm_implementation(env: Game, config: LRMConfig, rl='qrm', seed=Non
                     assert False, "RL approach is not supported yet"
 
             # selecting an action using epsilon greedy
-            a = policy.get_best_action(o1_features, u1, config.epsilon)
+            a = policy.get_best_action(o1_features, u1, config["epsilon"])
 
             # executing a random action
             reward, done = env.execute_action(a)
@@ -137,16 +137,16 @@ def original_lrm_implementation(env: Game, config: LRMConfig, rl='qrm', seed=Non
             policy.learn_if_needed()
 
             # Testing
-            if step % config.test_freq == 0:
+            if step % config["test_freq"] == 0:
                 print("Step: %d\tTrain: %0.1f" % (step, reward_total - last_reward))
                 train_rewards.append((step, reward_total - last_reward))
                 last_reward = reward_total
                 # finishing the experiment if the max number of learning steps was reached
-                if policy._get_step() > config.max_learning_steps:
+                if policy._get_step() > config["max_learning_steps"]:
                     finish_learning = True
 
             # checking if the episode finishes or the agent reaches the maximum number of training steps
-            if done or config.train_steps <= step or finish_learning:
+            if done or config["train_steps"] <= step or finish_learning:
                 break
 
                 # Moving to the next state
@@ -154,7 +154,7 @@ def original_lrm_implementation(env: Game, config: LRMConfig, rl='qrm', seed=Non
 
         # If the trace isn't correctly predicted by the reward machine,
         # we add the trace and relearn the machine
-        if add_trace and step < config.train_steps and not finish_learning:
+        if add_trace and step < config["train_steps"] and not finish_learning:
             print("Relearning the reward machine...")
             rm.add_trace(trace)
             same_rm, info = rm.learn_the_reward_machine()
@@ -206,8 +206,8 @@ class LRMAgent:
         assert isinstance(env.action_space, gym.spaces.Discrete), "Only Discrete action spaces are currently supported"
 
         # Initialization
-        self._rm = RewardMachine(self._config.rm_u_max, self._config.rm_preprocess, self._config.rm_tabu_size, self._config.rm_workers,
-                                 self._config.rm_lr_steps, env.get_perfect_rm(), self._config.use_perfect_rm,
+        self._rm = RewardMachine(self._config["rm_u_max"], self._config["rm_preprocess"], self._config["rm_tabu_size"], self._config["rm_workers"],
+                                 self._config["rm_lr_steps"], env.get_perfect_rm(), self._config["use_perfect_rm"],
                                  seed=seed)  # TODO: Fix perfect RM
 
         self._policy = None
@@ -226,13 +226,13 @@ class LRMAgent:
 
         # Collecting random traces for learning the reward machine
         print("Collecting random traces...")
-        while step < self._config.rm_init_steps:
+        while step < self._config["rm_init_steps"]:
 
             # Running an episode using a random policy
             obs, info = env.reset(seed=sub_seeder.randint(0, int(4e9)))
             trace = [(info["events"], 0.0)]
 
-            for _ in range(self._config.episode_horizon):
+            for _ in range(self._config["episode_horizon"]):
 
                 # executing a random action
                 action = env.action_space.sample()
@@ -245,13 +245,13 @@ class LRMAgent:
                 step += 1
 
                 # Testing
-                if step % self._config.test_freq == 0:
+                if step % self._config["test_freq"] == 0:
                     print("Step: %d\tTrain: %0.1f" % (step, reward_total - last_reward))
                     train_rewards.append((step, reward_total - last_reward))
                     last_reward = reward_total
 
                 # Check for episode termination
-                if done or self._config.rm_init_steps <= step:
+                if done or self._config["rm_init_steps"] <= step:
                     if done:
                         self._rm.add_terminal_observations(o2_events)
                     break
@@ -266,7 +266,7 @@ class LRMAgent:
 
         # Start learning a self._policy for the current rm
         finish_learning = False
-        while step < self._config.train_steps and not finish_learning:
+        while step < self._config["train_steps"] and not finish_learning:
 
             o1, info = env.reset(seed=sub_seeder.randint(0, int(4e9)))
 
@@ -281,18 +281,18 @@ class LRMAgent:
             trace = [(o1_events, 0.0)]
             add_trace = False
 
-            for _ in range(self._config.episode_horizon):
+            for _ in range(self._config["episode_horizon"]):
 
                 # Re-initialize the policy if the RM changed
                 if self._policy is None:
                     print("Learning a policy for the current RM...")
-                    if not self._config.use_qrm:
+                    if not self._config["use_qrm"]:
                         self._policy = DQN(self._config, len(o1_features), env.action_space.n, self._rm, seed=sub_seeder.randint(0, int(4e9)))
                     else:
                         self._policy = QRM(self._config, len(o1_features), env.action_space.n, self._rm, seed=sub_seeder.randint(0, int(4e9)))
 
                 # Select and execute an action using epsilon greedy
-                action = self._policy.get_best_action(o1_features, u1, self._config.epsilon)
+                action = self._policy.get_best_action(o1_features, u1, self._config["epsilon"])
                 o2, reward, terminated, truncated, info = env.step(action)
 
                 # Handle tuple observation spaces
@@ -326,23 +326,23 @@ class LRMAgent:
                 self._policy.learn_if_needed()
 
                 # Testing
-                if step % self._config.test_freq == 0:
+                if step % self._config["test_freq"] == 0:
                     print("Step: %d\tTrain: %0.1f" % (step, reward_total - last_reward))
                     train_rewards.append((step, reward_total - last_reward))
                     last_reward = reward_total
                     # finishing the experiment if the max number of learning steps was reached
-                    if self._policy._get_step() > self._config.max_learning_steps:
+                    if self._policy._get_step() > self._config["max_learning_steps"]:
                         finish_learning = True
 
                 # Check if the episode finishes or the agent reaches the maximum number of training steps
-                if done or self._config.train_steps <= step or finish_learning:
+                if done or self._config["train_steps"] <= step or finish_learning:
                     break
 
                 # Move to the next state
                 o1_events, o1_features, u1 = o2_events, o2_features, u2
 
             # If the trace isn't correctly predicted by the reward machine, add the trace and re-learn the machine
-            if add_trace and step < self._config.train_steps and not finish_learning:
+            if add_trace and step < self._config["train_steps"] and not finish_learning:
                 print("Relearning the reward machine...")
                 self._rm.add_trace(trace)
                 same_rm, info = self._rm.learn_the_reward_machine()
