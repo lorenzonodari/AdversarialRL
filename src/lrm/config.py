@@ -23,7 +23,7 @@ class LRMConfig(dict):
                 if type(current_value) is not type(value):
                     raise ValueError(f'Invalid type for "{key}": got {type(value)}, need {type(current_value)}')
 
-                setattr(self, key, value)
+                self[key] = value
 
             except KeyError as exception:
                 raise ValueError(f'Unknown configuration parameter: "{key}"') from exception
