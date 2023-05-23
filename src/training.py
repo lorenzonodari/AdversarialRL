@@ -1,3 +1,4 @@
+import argparse
 import time
 import os
 import csv
@@ -72,38 +73,86 @@ def check_reimplementation(n_runs=15):
         save_results(results, run_time, 'impl_test', seed=i)
 
 
-def test_minesweeper_lrm(n_runs=5):
+def train_cookieworld_lrm_agent(n_runs, session_name, config_file):
 
-    for labeling in [MineSuggestionLF, MineCountLF]:
+    for i in range(n_runs):
 
-        for i in range(n_runs):
+        agent = LRMAgent()
 
-            agent = LRMAgent(
-                rm_u_max=5 + 2 * i,
-                rm_lr_steps=10 + 10 * i,
-                rm_tabu_size=int(1e5),
+        env = CookieWorldEnv(seed=i)
 
-            )
+        start = time.time()
+        results = agent.run_lrm(env, seed=i)
+        run_time = int(time.time() - start)
+        save_results(results, run_time, session_name, seed=i)
 
-            env = MineSweeperMedium()
-            env = PreviousAction(env)
-            env = Antialias(env)
-            env = Labeling(env, labeling)
-            env = FlattenGridActions(env)
-            env = PerfectRewardMachine(env, {})
 
-            start = time.time()
-            results = agent.run_lrm(env, seed=i)
-            run_time = int(time.time() - start)
-            save_results(results, run_time, f'test_minesweeper_{labeling.__name__}', seed=i)
+def train_minesweeper_lrm_agent(n_runs, session_name, config_file):
+
+    for i in range(n_runs):
+
+        agent = LRMAgent(
+            rm_u_max=5 + 2 * i,
+            rm_lr_steps=10 + 10 * i,
+            rm_tabu_size=int(1e5),
+            train_steps=1
+
+        )
+
+        env = MineSweeperMedium()
+        env = PreviousAction(env)
+        env = Antialias(env)
+        env = Labeling(env, MineSuggestionLF)
+        env = FlattenGridActions(env)
+        env = PerfectRewardMachine(env, {})
+
+        start = time.time()
+        results = agent.run_lrm(env, seed=i)
+        run_time = int(time.time() - start)
+        save_results(results, run_time, session_name, seed=i)
+
+
+def train_lrm_agent(env, n_runs, session_name, config_file):
+
+    scenarios = {
+
+        "MS": train_minesweeper_lrm_agent,
+        "CW": train_cookieworld_lrm_agent
+
+    }
+
+    try:
+
+        train_function = scenarios[env]
+        train_function(n_runs, session_name, config_file)
+
+    except KeyError:
+        print(f'Requested environment "{env}" not found in available training scenarios')
 
 
 if __name__ == '__main__':
 
+    args_parser = argparse.ArgumentParser(description='Train LRM agents of various environments')
+    args_parser.add_argument('-e', '--env',
+                             choices=['MS', 'CW'],  # See train_lrm_agent for the meanings
+                             help='The environment to be used for training the LRM agent',
+                             required=True)
+    args_parser.add_argument('-n', '--n_runs',
+                             type=int,
+                             help='The number of agents to be trained',
+                             required=True)
+    args_parser.add_argument('-s', '--session',
+                             help='The name of this training session: used to save results',
+                             required=True)
+    args_parser.add_argument('-c', '--config',
+                             help='Path to the configuration file containing LRM and training parameters',
+                             type=argparse.FileType('r'),
+                             required=True)
+
+    args = args_parser.parse_args()
+
     tf.compat.v1.disable_v2_behavior()  # TODO: Find a better place (Or port to tf2 directly)
     multiprocessing.set_start_method('fork')  # TODO: Find a better place
 
-    test_minesweeper_lrm()
-
-    # TODO: Implement proper CLI interface for ease-of-use
+    train_lrm_agent(args.env, args.n_runs, args.session, args.config)
 
