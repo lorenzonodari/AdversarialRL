@@ -38,7 +38,7 @@ class QRM(RL):
         # create experience replay buffer
         if self.lp["prioritized_replay"]:
             self.replay_buffer = PrioritizedReplayBuffer(lp["buffer_size"], alpha=lp["prioritized_replay_alpha"])
-            if lp["prioritized_replay_beta_iters"] is None:
+            if lp["prioritized_replay_beta_iters"] == 0:
                 lp["prioritized_replay_beta_iters"] = lp["train_steps"]
             self.beta_schedule = LinearSchedule(lp["prioritized_replay_beta_iters"], initial_p=lp["prioritized_replay_beta0"], final_p=1.0)
         else:

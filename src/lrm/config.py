@@ -2,7 +2,7 @@ import configparser
 
 
 class LRMConfig(dict):
-    def __init__(self, config_file=None, **kwargs):
+    def __init__(self, *, config_file=None, **kwargs):
 
         super().__init__()
 
@@ -15,18 +15,21 @@ class LRMConfig(dict):
 
         # Update the value for explicitly specified parameters
         for key, value in kwargs.items():
+            self._update_config(key, value)
 
-            try:
-                current_value = self[key]
+    def _update_config(self, key, value):
 
-                # Type checking
-                if type(current_value) is not type(value):
-                    raise ValueError(f'Invalid type for "{key}": got {type(value)}, need {type(current_value)}')
+        try:
+            current_value = self[key]
 
-                self[key] = value
+            # Type checking
+            if type(current_value) is not type(value):
+                raise ValueError(f'Invalid type for "{key}": got {type(value)}, need {type(current_value)}')
 
-            except KeyError as exception:
-                raise ValueError(f'Unknown configuration parameter: "{key}"') from exception
+            self[key] = value
+
+        except KeyError as exception:
+            raise ValueError(f'Unknown configuration parameter: "{key}"') from exception
 
     def _init_defaults(self):
 
@@ -63,10 +66,28 @@ class LRMConfig(dict):
         self["prioritized_replay"] = False  # If True, use Prioritized Experience Replay
         self["prioritized_replay_alpha"] = 0.6  # Alpha parameter
         self["prioritized_replay_beta0"] = 0.4  # Initial value for beta parameter
-        self["prioritized_replay_beta_iters"] = None  # Number of iterations for each beta value
+        self["prioritized_replay_beta_iters"] = 0  # Number of iterations for each beta value
         self["prioritized_replay_eps"] = 1e-6  # Epsilon parameter
 
     def _load_config(self, config_file):
 
-        # TODO: Implement
-        pass
+        parser = configparser.ConfigParser()
+        parser.read_file(config_file)
+
+        for key, value_str in parser['LRM'].items():
+
+            if key not in self:
+                raise ValueError(f'Unknown configuration parameter: "{key}"')
+
+            value_type = type(self[key])
+
+            # Attempt type conversion from string to actual required type
+            try:
+
+                value = value_type(value_str)
+                self._update_config(key, value)
+
+            except ValueError:
+
+                raise ValueError(f'Invalid type for "{key}": could not convert "{value_str }" to {value_type}')
+

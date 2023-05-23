@@ -177,9 +177,9 @@ def original_lrm_implementation(env: Game, config: LRMConfig, rl='qrm', seed=Non
 
 class LRMAgent:
 
-    def __init__(self, **kwargs):
+    def __init__(self, *, config_file=None, **kwargs):
 
-        self._config = LRMConfig(**kwargs)
+        self._config = LRMConfig(config_file=config_file, **kwargs)
         self._rm = None
         self._policy = None
 
