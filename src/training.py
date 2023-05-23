@@ -10,9 +10,8 @@ from environments import CookieWorldEnv
 from environments.utils import PerfectRewardMachine, FlattenGridActions
 from environments.game import Game, GameParams
 from environments.grid_world import GridWorldParams
-from labeling import Labeling, MineCountLF, MineSuggestionLF
+from labeling import Labeling, MineSuggestionLF
 
-import gymnasium as gym
 import tensorflow as tf
 from popgym.envs.minesweeper import MineSweeperMedium
 from popgym.wrappers import Antialias, PreviousAction
