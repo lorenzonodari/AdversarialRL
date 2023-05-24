@@ -2,9 +2,13 @@ from .reward_functions import *
 from .tabu_search import run_tabu_search
 
 import random
+import pickle
 
 
 class RewardMachine:
+
+    # TODO: Refactor class into RMLearner + RewardMachine
+
     def __init__(self, U_max, preprocess_trace, tabu_list_max, n_workers, rm_lr_steps, perfect_rm, use_perfect_rm, *, seed=None):
         # General learning parameters
         self.tabu_list_max = tabu_list_max # maximum size for the tabu list
@@ -215,3 +219,72 @@ class RewardMachine:
 
     def get_states(self):
         return self.U
+
+    def __getstate__(self):
+        """
+        Specify which member attributes should be pickled when serializing an instance of this class
+
+        :return: A tuple of serializable attributes
+        """
+
+        return self.u0, self.U, self.delta_u, self.state_r
+
+    def __setstate__(self, state):
+
+        # Learning configuration
+        self.tabu_list_max = None
+        self.preprocess_trace = None
+        self.U_max = None
+        self.n_workers = None
+        self.rm_lr_steps = None
+        self.perfect_rm = None
+        self.use_perfect_rm = None
+
+        # Auxiliary variables for RM learning
+        self.N = {}
+        self.state_p = {}
+        self.traces = []
+        self.n_examples_long = 0
+        self.n_examples_short = 0
+        self.terminal_obs = set()
+
+        # RNG configuration
+        self._seed = None
+        self._random = None
+
+        # Restore the state we care for: the actual Reward Machine
+        self.u0, self.U, self.delta_u, self.state_r = state
+
+    def save(self, file):
+        """
+        Serialize the learned reward machine for later use by an agent
+
+        :param file: The file where to store the serialized RM
+        """
+
+        pickle.dump(self, file)
+
+    @staticmethod
+    def load(file, config, perfect_rm=None, *, seed=None):
+
+        rm = pickle.load(file)
+
+        assert isinstance(rm, RewardMachine), "The given file does not contain a serialized RewardMachine instance"
+
+        rm.tabu_list_max = config["rm_tabu_size"]
+        rm.preprocess_trace = config["rm_preprocess"]
+        rm.U_max = config["rm_u_max"]
+        rm.n_workers = config["rm_workers"]
+        rm.rm_lr_steps = config["rm_lr_steps"]
+        rm.use_perfect_rm = config["use_perfect_rm"]
+
+        if perfect_rm is None:
+            rm.perfect_rm = {}
+        else:
+            rm.perfect_rm = perfect_rm
+
+        rm._seed = seed
+        rm._random = random.Random(seed)
+
+        return rm
+
