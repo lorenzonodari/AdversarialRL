@@ -91,3 +91,16 @@ class LRMConfig(dict):
 
                 raise ValueError(f'Invalid type for "{key}": could not convert "{value_str }" to {value_type}')
 
+    def save(self, config_file):
+        """
+        Save the current configuration to a file.
+
+        The file can later be used to reload the same configuration by using the "config_file" argument of
+        the class constructor
+
+        :param config_file: The file where to save the current configuration
+        """
+
+        config = configparser.ConfigParser()
+        config["LRM"] = self
+        config.write(config_file)
