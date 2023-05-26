@@ -29,7 +29,7 @@ class QRM(RL):
         self.lp = lp 
         self.rm = reward_machine
         self.num_features = num_features
-        self.num_actions  = num_actions
+        self.num_actions = num_actions
 
         # Creating the network
         self.sess = tf.Session()
@@ -60,11 +60,11 @@ class QRM(RL):
 
     def _create_network(self):
         n_features = self.num_features
-        n_actions  = self.num_actions
+        n_actions = self.num_actions
         n_policies = len(self.rm.get_states())
 
         # Inputs to the network
-        self.s1 = tf.placeholder(tf.float64, [None, n_features])
+        self.s1 = tf.placeholder(tf.float64, [None, n_features], name="policy_input")
         self.a = tf.placeholder(tf.int32) 
         self.s2 = tf.placeholder(tf.float64, [None, n_features])
         self.done = tf.placeholder(tf.float64, [None, n_policies])
@@ -81,7 +81,7 @@ class QRM(RL):
             self.policies.append(policy)
 
         # connecting all the networks into one big net
-        self._reconnect()        
+        self._reconnect()
 
     def _reconnect(self):
         # Redefining connections between the different DQN networks
@@ -108,7 +108,7 @@ class QRM(RL):
             p.add_optimizer(self.rewards[:,i], self.done[:,i], Q_target[:,i], self.ignore[:,i])
             # Now that everything is set up, we initialize the weights
             p.initialize_variables()
-        
+
         # Auxiliary variables to train all the critics, actors, and target networks
         self.train = []
         for i in range(n_policies):
@@ -187,6 +187,18 @@ class QRM(RL):
         self.replay_buffer.add(o1_features, a, o2_features, rewards, next_policies, done, ignore)
         self._add_step()
 
+    def save(self, save_folder):
+        """
+        Save the current policy as a TF checkpoint containing all trainable parameters.
+
+        The stored policy can later be restored by using the from_checkpoints argument of the class constructor.
+
+        :param save_folder: The path to the folder to be used for storing the policy
+        """
+
+        saver = tf.train.Saver()
+        saver.save(self.sess, f'{save_folder}/qrm_policy')
+
 
 class PolicyDQN:
     def __init__(self, policy_name, lp, n_features, n_actions, sess, s1, a, s2, IS_weights):
@@ -215,7 +227,7 @@ class PolicyDQN:
             update_target = create_target_updates(q_values_weights, q_target_weights)
 
             # Q_values -> get optimal actions
-            best_action = tf.argmax(q_values, 1)
+            best_action = tf.argmax(q_values, 1, name="best_action")
 
             # getting current value for q(s1,a)
             action_mask = tf.one_hot(indices=self.a, depth=self.n_actions, dtype=tf.float64)
