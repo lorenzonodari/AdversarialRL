@@ -1,5 +1,7 @@
 import random
+import os
 
+import tensorflow.compat.v1 as tf
 import gymnasium as gym
 import numpy as np
 
@@ -175,10 +177,14 @@ def original_lrm_implementation(env: Game, config: LRMConfig, rl='qrm', seed=Non
     return train_rewards, rm_scores, rm.get_info()
 
 
-class LRMAgent:
+class LRMTrainer:
+    """
+    Implementation of RL agent training based on the LRM algorithm by Icarte et al.
+    """
 
-    def __init__(self, *, config_file=None, **kwargs):
+    def __init__(self, agent_id=None, *, config_file=None, **kwargs):
 
+        self._id = agent_id
         self._config = LRMConfig(config_file=config_file, **kwargs)
         self._rm = None
         self._policy = None
@@ -355,6 +361,11 @@ class LRMAgent:
                 else:
                     print("the new RM is not better than the current RM!!")
 
+        # If the agent's named, serialize it before terminating
+        if self._id is not None:
+            self.save()
+            print(f'Saved trained agent: [{self._id}]')
+
         if self._policy is not None:
             self._policy.close()
             self._policy = None
@@ -363,7 +374,144 @@ class LRMAgent:
 
     def save(self):
         """
-        Serialize the agent, saving the learned RM and the associated policies
+        Serialize the current state of the LRM agent.
+
+        This function stores the learned RM, the associated policies and the configuration used for training, thus
+        allowing one to train an agent and later retrieve it for further testing.
+        After this method is called, one can retrieve the trained agent by creating LRMAgent instances.
         """
 
-        # TODO: Implement
+        save_folder = f'agents/{self._id}'
+        os.makedirs(save_folder, exist_ok=True)
+
+        # Save the configuration used to train the agent
+        with open(f'{save_folder}/training.conf', 'w') as config_file:
+            self._config.save(config_file)
+
+        # Save the final RM that was learned by the agent
+        with open(f'{save_folder}/reward_machine.pkl', 'wb') as rm_file:
+            self._rm.save(rm_file)
+
+        # Save the agent's policy
+        self._policy.save(save_folder)
+
+
+class TrainedLRMAgent:
+
+    def __init__(self, agent_id):
+        """
+        Load a pre-trained LRM agent.
+
+        :param agent_id: The unique string identifying the agent to be loaded
+        """
+
+        load_folder = f'agents/{agent_id}'
+        assert os.path.exists(load_folder), f"The specified agent ID [{agent_id}] could not be found"
+
+        # Load the configuration that was used to train the agent
+        config = LRMConfig(config_file=f'{load_folder}/training.conf')
+
+        # Load the reward machine that was learned
+        with open(f'{load_folder}/reward_machine.pkl', 'rb') as rm_file:
+            self._rm = RewardMachine.load(rm_file, config)
+
+        # Load the agent's policy
+        self._tf_session = tf.Session()
+        saver = tf.train.import_meta_graph(f'{load_folder}/qrm_policy.meta')
+        saver.restore(self._tf_session, tf.train.latest_checkpoint(load_folder))
+
+        # Initialize the RM state
+        self._rm_state = None
+
+    def get_best_action(self, obs_features):
+        """
+        Predict the best action to take given an observation and the agent's internal RM state.
+
+        After the prediction is made, the internal RM state is NOT automatically transitioned. In order to keep
+        proper track of the RM state, after each action is taken in the environment, the RM state must be updated
+        by calling LRMAgent.update_rm_state() with the events that were produced by executing the predicted action.
+
+        :param obs_features: The observation features received from the environment
+        :return: The action that the agent wants to take in the environment
+        """
+
+        assert self._rm_state is not None, "The agent must be reset before being used"
+
+        policy_input = np.reshape(obs_features, (1, -1))
+        q_value_op = self._tf_session.graph.get_tensor_by_name(f'qrm_{self._rm_state}/best_action:0')
+        best_action = self._tf_session.run(q_value_op, feed_dict={'policy_input:0': policy_input})
+
+        return best_action
+
+    def update_rm_state(self, events):
+        """
+        Update the internal RM state of the agent
+
+        :param events: The events observed in the environment after the last action
+        """
+
+        assert self._rm_state is not None, "The agent must be reset before being used"
+
+        self._rm_state = self._rm.get_next_state(self._rm_state, events)
+
+    def reset(self):
+        """
+        Reset the agent's internal state.
+
+        This need to be called every time a new episode starts, in order to make sure
+        that the agent's RM is in its initial state.
+        """
+
+        self._rm_state = self._rm.get_initial_state()
+
+    def close(self):
+
+        self._tf_session.close()
+
+    def test(self, env, n_steps, episode_horizon):
+        """
+        Test the agent by making it act in the given environment.
+
+        :param env: The environment to be tested. NB: Must match the environment used to train the agent
+        :param n_episodes: Number of episodes to be run
+        :return: A tuple containing (total_reward, mean_reward_per_episode) obtained by the agent during the test
+        """
+
+        steps = 0
+        total_reward = 0
+        while steps < n_steps:
+
+            # New episode: reset the agent
+            self.reset()
+
+            # New episode: reset the environment
+            obs, info = env.reset()
+
+            # Build the initial observation features and determine first action to take
+            obs_features = np.concatenate((obs, info["event_features"]), axis=None)
+            action = self.get_best_action(obs_features)
+
+            for j in range(episode_horizon):
+
+                # Execute action
+                obs, reward, terminated, truncated, info = env.step(action)
+                done = (terminated or truncated) or (not j < episode_horizon)
+
+                # Update rewards
+                total_reward += reward
+
+                # Check for episode termination
+                if done:
+                    break
+
+                # Update RM state
+                self.update_rm_state(info["events"])
+
+                # Determine new action to take
+                obs_features = np.concatenate((obs, info["event_features"]), axis=None)
+                action = self.get_best_action(obs_features)
+
+                # Update number of executed steps
+                steps += 1
+
+        return total_reward, total_reward / n_steps

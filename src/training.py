@@ -4,7 +4,7 @@ import os
 import csv
 import multiprocessing
 
-from lrm.algorithm import LRMAgent, original_lrm_implementation
+from lrm.algorithm import LRMTrainer, original_lrm_implementation
 from lrm.config import LRMConfig
 from environments import CookieWorldEnv
 from environments.utils import PerfectRewardMachine, FlattenGridActions
@@ -55,7 +55,7 @@ def check_reimplementation(n_runs=15):
 
     for i in range(n_runs):
 
-        agent = LRMAgent()
+        agent = LRMTrainer()
         config = LRMConfig()
 
         env = CookieWorldEnv(seed=i)
@@ -76,7 +76,7 @@ def train_cookieworld_lrm_agent(n_runs, session_name, config_file):
 
     for i in range(n_runs):
 
-        agent = LRMAgent()
+        agent = LRMTrainer()
 
         env = CookieWorldEnv(seed=i)
 
@@ -90,7 +90,7 @@ def train_minesweeper_lrm_agent(n_runs, session_name, config_file):
 
     for i in range(n_runs):
 
-        agent = LRMAgent(
+        agent = LRMTrainer(
             rm_u_max=5 + 2 * i,
             rm_lr_steps=10 + 10 * i,
             rm_tabu_size=int(1e5),
