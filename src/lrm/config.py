@@ -72,7 +72,8 @@ class LRMConfig(dict):
     def _load_config(self, config_file):
 
         parser = configparser.ConfigParser()
-        parser.read_file(config_file)
+        with open(config_file, 'r') as config:
+            parser.read_file(config)
 
         for key, value_str in parser['LRM'].items():
 
