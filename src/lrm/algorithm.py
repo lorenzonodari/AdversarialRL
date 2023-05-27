@@ -468,7 +468,7 @@ class TrainedLRMAgent:
 
         self._tf_session.close()
 
-    def test(self, env, n_steps, episode_horizon):
+    def test(self, env, n_steps, episode_horizon, *, seed=None):
         """
         Test the agent by making it act in the given environment.
 
@@ -485,7 +485,7 @@ class TrainedLRMAgent:
             self.reset()
 
             # New episode: reset the environment
-            obs, info = env.reset()
+            obs, info = env.reset(seed=seed)
 
             # Build the initial observation features and determine first action to take
             obs_features = np.concatenate((obs, info["event_features"]), axis=None)
