@@ -479,13 +479,18 @@ class TrainedLRMAgent:
 
         steps = 0
         total_reward = 0
+
+        # Setup seeding
+        sub_seed = random.Random(seed).randint(0, int(4e9))
+        sub_seeder = random.Random(sub_seed)
+
         while steps < n_steps:
 
             # New episode: reset the agent
             self.reset()
 
             # New episode: reset the environment
-            obs, info = env.reset(seed=seed)
+            obs, info = env.reset(seed=sub_seeder.randint(0, int(4e9)))
 
             # Build the initial observation features and determine first action to take
             obs_features = np.concatenate((obs, info["event_features"]), axis=None)
