@@ -437,7 +437,7 @@ class TrainedLRMAgent:
 
         assert self._rm_state is not None, "The agent must be reset before being used"
 
-        policy_input = np.reshape(obs_features, (1, -1))
+        policy_input = np.reshape(obs_features, (1, len(obs_features)))
         q_value_op = self._tf_session.graph.get_tensor_by_name(f'qrm_{self._rm_state}/best_action:0')
         best_action = self._tf_session.run(q_value_op, feed_dict={'policy_input:0': policy_input})
 
@@ -486,37 +486,33 @@ class TrainedLRMAgent:
 
         while steps < n_steps:
 
-            # New episode: reset the agent
-            self.reset()
-
             # New episode: reset the environment
             obs, info = env.reset(seed=sub_seeder.randint(0, int(4e9)))
 
-            # Build the initial observation features and determine first action to take
+            # Build the initial observation feature vector
             obs_features = np.concatenate((obs, info["event_features"]), axis=None)
-            action = self.get_best_action(obs_features)
+
+            # New episode: reset the agent's RM
+            self.reset()
 
             for j in range(episode_horizon):
 
-                # Execute action
+                # Determine new action to take and execute it
+                action = self.get_best_action(obs_features)
                 obs, reward, terminated, truncated, info = env.step(action)
-                done = (terminated or truncated) or (not j < episode_horizon)
 
-                # Update rewards
-                total_reward += reward
-
-                # Check for episode termination
-                if done:
-                    break
+                # Prepare observation data
+                obs_features = np.concatenate((obs, info["event_features"]), axis=None)
 
                 # Update RM state
                 self.update_rm_state(info["events"])
 
-                # Determine new action to take
-                obs_features = np.concatenate((obs, info["event_features"]), axis=None)
-                action = self.get_best_action(obs_features)
-
-                # Update number of executed steps
+                # Update rewards and number of executed steps
+                total_reward += reward
                 steps += 1
+
+                # Check for episode termination
+                if (terminated or truncated) or (not j < episode_horizon) or (steps >= n_steps):
+                    break
 
         return total_reward, total_reward / n_steps
