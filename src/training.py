@@ -6,7 +6,7 @@ import multiprocessing
 
 from lrm.algorithm import LRMTrainer, original_lrm_implementation
 from lrm.config import LRMConfig
-from environments import CookieWorldEnv
+from environments import CookieWorldEnv, KeysWorldEnv, SymbolWorldEnv
 from environments.game import Game, GameParams
 from environments.grid_world import GridWorldParams
 
@@ -72,9 +72,37 @@ def train_cookieworld_lrm_agent(n_runs, session_name, config_file):
 
     for i in range(n_runs):
 
-        agent = LRMTrainer()
+        agent = LRMTrainer(f'{session_name}_{i}', config_file=config_file)
 
         env = CookieWorldEnv(seed=i)
+
+        start = time.time()
+        results = agent.run_lrm(env, seed=i)
+        run_time = int(time.time() - start)
+        save_results(results, run_time, session_name, seed=i)
+
+
+def train_keysworld_lrm_agent(n_runs, session_name, config_file):
+
+    for i in range(n_runs):
+
+        agent = LRMTrainer(f'{session_name}_{i}', config_file=config_file)
+
+        env = KeysWorldEnv(seed=i)
+
+        start = time.time()
+        results = agent.run_lrm(env, seed=i)
+        run_time = int(time.time() - start)
+        save_results(results, run_time, session_name, seed=i)
+
+
+def train_symbolworld_lrm_agent(n_runs, session_name, config_file):
+
+    for i in range(n_runs):
+
+        agent = LRMTrainer(f'{session_name}_{i}', config_file=config_file)
+
+        env = SymbolWorldEnv(seed=i)
 
         start = time.time()
         results = agent.run_lrm(env, seed=i)
@@ -86,7 +114,9 @@ def train_lrm_agent(env, n_runs, session_name, config_file):
 
     scenarios = {
 
-        "CW": train_cookieworld_lrm_agent
+        "CW": train_cookieworld_lrm_agent,
+        "KW": train_keysworld_lrm_agent,
+        "SW": train_symbolworld_lrm_agent
 
     }
 
@@ -103,7 +133,7 @@ if __name__ == '__main__':
 
     args_parser = argparse.ArgumentParser(description='Train LRM agents of various environments')
     args_parser.add_argument('-e', '--env',
-                             choices=['CW'],  # See train_lrm_agent for the meanings
+                             choices=['CW', 'KW', 'SW'],  # See train_lrm_agent for the meanings
                              help='The environment to be used for training the LRM agent',
                              required=True)
     args_parser.add_argument('-n', '--n_runs',
