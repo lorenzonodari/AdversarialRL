@@ -1,13 +1,11 @@
 from .game_objects import *
 from .grid_world import GridWorldParams, GridWorld, run_human_agent
-import random
 
-# TODO: Implement seeding
 
 class SymbolWorld(GridWorld):
 
-    def __init__(self, params):
-        super().__init__(params)
+    def __init__(self, params, *, seed=None):
+        super().__init__(params, seed=seed)
 
     def _get_reward_and_gameover(self):
         # returns the reward and whether the game is over
@@ -97,8 +95,8 @@ class SymbolWorld(GridWorld):
                 if str(obj) in ".": self.key_room = obj
 
         # randomly picking a target color
-        self.key_color.label = random.choice(self.colors)
-        self.key_room.label = random.choice(self.arrows)
+        self.key_color.label = self._random.choice(self.colors)
+        self.key_room.label = self._random.choice(self.arrows)
         self.target_color = str(self.key_color).upper()
         if str(self.key_room) == ".": self.target_room = [0,2]
         if str(self.key_room) == "n": self.target_room = [0]

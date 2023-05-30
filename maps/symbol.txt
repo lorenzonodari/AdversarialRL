@@ -1,0 +1,18 @@
+XXXXX
+XabcX
+X   X
+X   X
+XX XX
+XX XXXXXXXXXXXX
+XX XXXXX      X
+XX XXXXX      ?
+XXA           X
+XX XXXXX      .
+XX XXXXX      X
+XX XXXXXXXXXXXX
+XX XX
+X   X
+X   X
+XabcX
+XXXXX
+Rooms: [[(0,0),(4,4)],[(5,0),(11,6)],[(12,0),(16,4)],[(5,7),(11,14)]]

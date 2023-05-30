@@ -3,6 +3,7 @@ from gymnasium.envs.registration import register as register_env_gym
 
 from .cookie_world import CookieWorld
 from .keys_world import KeysWorld
+from .symbol_world import SymbolWorld
 from .grid_world import GridWorldParams
 
 
@@ -106,5 +107,47 @@ class KeysWorldEnv(gym.Env):
         return self._perfect_rm
 
 
+class SymbolWorldEnv(gym.Env):
+
+    def __init__(self, *, seed=None):
+
+        self._seed = seed
+        self._params = GridWorldParams('symbolworld', 'maps/symbol.txt', 0.05)
+        self._world = None
+        self._perfect_rm = SymbolWorld(self._params).get_perfect_rm()
+
+        self.action_space = gym.spaces.Discrete(4, seed=self._seed)
+        self.observation_space = gym.spaces.Box(low=0.0, high=1.0, shape=(512,), seed=self._seed)
+
+    def step(self, action):
+
+        reward, done = self._world.execute_action(action)
+        obs = self._world._get_map_features()
+        info = {
+            "events": self._world.get_events(),
+            "event_features": self._world._get_event_features()
+        }
+
+        return obs, reward, done, False, info
+
+    def reset(self, *, seed=None, options=None):
+
+        super().reset(seed=seed)
+
+        self._world = SymbolWorld(self._params, seed=seed)
+        obs = self._world._get_map_features()
+        info = {
+            "events": self._world.get_events(),
+            "event_features": self._world._get_event_features()
+        }
+
+        return obs, info
+
+    def get_perfect_rm(self):
+
+        return self._perfect_rm
+
+
 register_env_gym(id='CookieWorld-v0', entry_point="environments:CookieWorldEnv")
 register_env_gym(id='KeysWorld-v0', entry_point="environments:KeysWorldEnv")
+register_env_gym(id='SymbolWorld-v0', entry_point="environments:SymbolWorldEnv")
