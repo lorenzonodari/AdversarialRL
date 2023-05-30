@@ -70,12 +70,12 @@ class KeysWorldEnv(gym.Env):
     def __init__(self, *, seed=None):
 
         self._seed = seed
-        self._params = GridWorldParams('keys_world', 'maps/2-keys.txt', 0.05)  # Movement noise
+        self._params = GridWorldParams('keysworld', 'maps/2-keys.txt', 0.05)  # Movement noise
         self._world = None
         self._perfect_rm = KeysWorld(self._params).get_perfect_rm()
 
         self.action_space = gym.spaces.Discrete(4, seed=self._seed)  # Up, Right, Down, Left
-        self.observation_space = gym.spaces.Box(low=0.0, high=1.0, shape=(270,))  # TODO: Determine obs space and test implementation
+        self.observation_space = gym.spaces.Box(low=0.0, high=1.0, shape=(270,), seed=self._seed)
 
     def step(self, action):
 
