@@ -1,13 +1,11 @@
 from .game_objects import *
 from .grid_world import GridWorldParams, GridWorld, run_human_agent
-import random
 
-# TODO: Implement seeding
 
 class KeysWorld(GridWorld):
 
-    def __init__(self, params):
-        super().__init__(params)
+    def __init__(self, params, *, seed=None):
+        super().__init__(params, seed=seed)
 
     def _get_reward_and_gameover(self):
         # returns the reward and whether the game is over
@@ -100,7 +98,7 @@ class KeysWorld(GridWorld):
                 if str(obj) == 'k': self.keys.append(obj)
 
         # randomly deciding the location of both keys
-        key_location = random.choice([0,1,2])        
+        key_location = self._random.choice([0,1,2])
         if key_location == 0 or key_location == 2:
             # removing both keys at room "key_location"
             for k in self.keys:
@@ -112,8 +110,8 @@ class KeysWorld(GridWorld):
             for k in self.keys:
                 if self._get_room(k.i,k.j) == 0: k_r0.append(k)
                 if self._get_room(k.i,k.j) == 2: k_r2.append(k)
-            k0 = random.choice(k_r0)
-            k2 = random.choice(k_r2)
+            k0 = self._random.choice(k_r0)
+            k2 = self._random.choice(k_r2)
             k0.in_map = False
             k2.in_map = False
 
@@ -168,7 +166,7 @@ class KeysWorld(GridWorld):
 
         # pick up the closer key
         if u in [1,2,3,4,5]:
-            keys = [(abs(k.i-i) + abs(k.j-j) + 0.0001*random.random(), k) for k in self.keys if k.in_map]
+            keys = [(abs(k.i-i) + abs(k.j-j) + 0.0001*self._random.random(), k) for k in self.keys if k.in_map]
             keys.sort()
             k = keys[0][1]
             if i < k.i: return Actions.down
