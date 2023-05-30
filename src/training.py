@@ -7,14 +7,10 @@ import multiprocessing
 from lrm.algorithm import LRMTrainer, original_lrm_implementation
 from lrm.config import LRMConfig
 from environments import CookieWorldEnv
-from environments.utils import PerfectRewardMachine, FlattenGridActions
 from environments.game import Game, GameParams
 from environments.grid_world import GridWorldParams
-from labeling import Labeling, MineSuggestionLF
 
 import tensorflow as tf
-from popgym.envs.minesweeper import MineSweeperMedium
-from popgym.wrappers import Antialias, PreviousAction
 
 
 def save_results(results, run_time, session_name, seed):
@@ -86,36 +82,10 @@ def train_cookieworld_lrm_agent(n_runs, session_name, config_file):
         save_results(results, run_time, session_name, seed=i)
 
 
-def train_minesweeper_lrm_agent(n_runs, session_name, config_file):
-
-    for i in range(n_runs):
-
-        agent = LRMTrainer(
-            rm_u_max=5 + 2 * i,
-            rm_lr_steps=10 + 10 * i,
-            rm_tabu_size=int(1e5),
-            train_steps=1
-
-        )
-
-        env = MineSweeperMedium()
-        env = PreviousAction(env)
-        env = Antialias(env)
-        env = Labeling(env, MineSuggestionLF)
-        env = FlattenGridActions(env)
-        env = PerfectRewardMachine(env, {})
-
-        start = time.time()
-        results = agent.run_lrm(env, seed=i)
-        run_time = int(time.time() - start)
-        save_results(results, run_time, session_name, seed=i)
-
-
 def train_lrm_agent(env, n_runs, session_name, config_file):
 
     scenarios = {
 
-        "MS": train_minesweeper_lrm_agent,
         "CW": train_cookieworld_lrm_agent
 
     }
@@ -133,7 +103,7 @@ if __name__ == '__main__':
 
     args_parser = argparse.ArgumentParser(description='Train LRM agents of various environments')
     args_parser.add_argument('-e', '--env',
-                             choices=['MS', 'CW'],  # See train_lrm_agent for the meanings
+                             choices=['CW'],  # See train_lrm_agent for the meanings
                              help='The environment to be used for training the LRM agent',
                              required=True)
     args_parser.add_argument('-n', '--n_runs',
