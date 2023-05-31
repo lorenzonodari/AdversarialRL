@@ -7,6 +7,9 @@ ARG session_name
 ARG env
 ARG config
 
+# Make sure protobuf <= 3.20
+RUN pip install protobuf==3.20
+
 # Copy code and cd into directory
 COPY --chown=ray:users . /code
 WORKDIR /code
