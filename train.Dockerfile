@@ -7,9 +7,6 @@ ARG session_name
 ARG env
 ARG config
 
-# Install POPGym
-RUN pip install "popgym[baselines]"
-
 # Copy code and cd into directory
 COPY --chown=ray:users . /code
 WORKDIR /code
