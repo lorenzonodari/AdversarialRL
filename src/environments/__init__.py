@@ -18,8 +18,15 @@ class CookieWorldEnv(gym.Env):
 
     """
 
-    def __init__(self, *, seed=None):
+    def __init__(self, *, episodic=True, seed=None):
+        """
+        Initialize an instance of the CookieWorld environment.
 
+        :param episodic: If True, each episode will terminate when the agent reaches the cookie.
+        :param seed: The seed to be used to initialize RNG sources
+        """
+
+        self._episodic = episodic
         self._seed = seed
         self._params = GridWorldParams('cookieworld', 'maps/cookie.txt', 0.05)  # Movement noise = 5%
         self._world = None
@@ -31,6 +38,10 @@ class CookieWorldEnv(gym.Env):
     def step(self, action):
 
         reward, done = self._world.execute_action(action)
+
+        if self._episodic:
+            done = reward == 1
+
         obs = self._world._get_map_features()
         info = {
             "events": self._world.get_events(),
