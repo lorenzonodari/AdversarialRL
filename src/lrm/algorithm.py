@@ -468,7 +468,7 @@ class TrainedLRMAgent:
 
         self._tf_session.close()
 
-    def test(self, env, n_steps, episode_horizon, *, seed=None):
+    def test(self, env, n_episodes, episode_horizon, *, seed=None):
         """
         Test the agent by making it act in the given environment.
 
@@ -477,14 +477,19 @@ class TrainedLRMAgent:
         :return: A tuple containing (total_reward, mean_reward_per_episode) obtained by the agent during the test
         """
 
-        steps = 0
+        # Wrap environment to impose episode lenght limit
+        env = gym.wrappers.TimeLimit(env, episode_horizon)
+
+        # Each entry is a tuple ([e1, e2, ...], (episode_reward, episode_length))
+        all_traces = []
         total_reward = 0
+        total_steps = 0
 
         # Setup seeding
         sub_seed = random.Random(seed).randint(0, int(4e9))
         sub_seeder = random.Random(sub_seed)
 
-        while steps < n_steps:
+        for i in range(n_episodes):
 
             # New episode: reset the environment
             obs, info = env.reset(seed=sub_seeder.randint(0, int(4e9)))
@@ -495,7 +500,13 @@ class TrainedLRMAgent:
             # New episode: reset the agent's RM
             self.reset()
 
-            for j in range(episode_horizon):
+            # Episode trace data
+            event_sequence = [info["events"]]
+            episode_reward = 0
+            episode_lenght = 0
+
+            done = False
+            while not done:
 
                 # Determine new action to take and execute it
                 action = self.get_best_action(obs_features)
@@ -507,12 +518,18 @@ class TrainedLRMAgent:
                 # Update RM state
                 self.update_rm_state(info["events"])
 
-                # Update rewards and number of executed steps
-                total_reward += reward
-                steps += 1
+                # Update event_sequence, episode reward and lenght
+                event_sequence.append(info["events"])
+                episode_reward += reward
+                episode_lenght += 1
 
                 # Check for episode termination
-                if (terminated or truncated) or (not j < episode_horizon) or (steps >= n_steps):
-                    break
+                done = terminated or truncated
 
-        return total_reward, total_reward / n_steps
+            # Update total reward, total steps and traces
+            current_trace = event_sequence, (episode_reward, episode_lenght)
+            all_traces.append(current_trace)
+            total_reward += episode_reward
+            total_steps += episode_lenght
+
+        return total_reward, total_steps, all_traces
