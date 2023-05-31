@@ -22,4 +22,4 @@ COPY --chown=ray:users . /code
 WORKDIR /code
 
 # Execute interactive shell
-CMD python src/training.py -e $TRAINING_SCENARIO -n $TRAINING_N_RUNS -c config/$TRAINING_CONFIG -s $TRAINING_SESSION_NAME
+CMD ["python src/training.py", "-e", "$TRAINING_SCENARIO", "-n", "$TRAINING_N_RUNS", "-c", "config/$TRAINING_CONFIG", "-s", "$TRAINING_SESSION_NAME" ]
