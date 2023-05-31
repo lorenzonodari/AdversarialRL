@@ -15,4 +15,4 @@ COPY --chown=ray:users . /code
 WORKDIR /code
 
 # Execute interactive shell
-CMD python src/training.py -e ${env} -n ${n_runs} -c ${config} -s ${session_name}
+CMD python src/training.py -e ${env} -n ${n_runs} -c config/${config} -s ${session_name}
