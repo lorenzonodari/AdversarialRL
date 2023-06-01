@@ -146,7 +146,6 @@ if __name__ == '__main__':
                              required=True)
     args_parser.add_argument('-c', '--config',
                              help='Path to the configuration file containing LRM and training parameters',
-                             type=argparse.FileType('r'),
                              required=True)
 
     args = args_parser.parse_args()
