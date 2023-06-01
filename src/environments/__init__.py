@@ -67,6 +67,10 @@ class CookieWorldEnv(gym.Env):
 
         return self._perfect_rm
 
+    def get_all_events(self):
+
+        return self._world.get_all_events()
+
 
 class KeysWorldEnv(gym.Env):
     """
@@ -117,6 +121,10 @@ class KeysWorldEnv(gym.Env):
 
         return self._perfect_rm
 
+    def get_all_events(self):
+
+        return self._world.get_all_events()
+
 
 class SymbolWorldEnv(gym.Env):
 
@@ -157,6 +165,10 @@ class SymbolWorldEnv(gym.Env):
     def get_perfect_rm(self):
 
         return self._perfect_rm
+
+    def get_all_events(self):
+
+        return self._world.get_all_events()
 
 
 register_env_gym(id='CookieWorld-v0', entry_point="environments:CookieWorldEnv")
