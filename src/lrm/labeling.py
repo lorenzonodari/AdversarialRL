@@ -72,6 +72,16 @@ class Labeling(gym.Wrapper):
 
         return self._labeling_instance.get_all_events()
 
+    def get_event_features(self, events):
+        """
+        Convert an event string to its features-space representation
+
+        :param events: An string of events
+        :return: The feature-space representation of the given events
+        """
+
+        return self._labeling_instance.get_event_features(events)
+
 
 class LabelingFunction:
     """
