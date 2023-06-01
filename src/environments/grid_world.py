@@ -161,11 +161,10 @@ class GridWorld:
                     map_features[i,self.map_classes.index(obj_type)+2] = 1.0
         return map_features
 
-    def _get_event_features(self):
+    def _get_event_features(self, detected_events):
         all_events = self.get_all_events()
         n_events = len(all_events)
         event_features = np.zeros(n_events, dtype=np.float64)
-        detected_events = self.get_events()
         for i in range(n_events):
             event_features[i] = float(detected_events.count(all_events[i]))
         return event_features
@@ -175,7 +174,8 @@ class GridWorld:
         map_features = self._get_map_features()
 
         # Adding the event detectors
-        event_features = self._get_event_features()
+        events = self.get_events()
+        event_features = self._get_event_features(events)
         
         # returning the concatenation
         return np.concatenate((map_features,event_features), axis=None)

@@ -43,9 +43,11 @@ class CookieWorldEnv(gym.Env):
             done = reward == 1
 
         obs = self._world._get_map_features()
+
+        events = self._world.get_events()
         info = {
-            "events": self._world.get_events(),
-            "event_features": self._world._get_event_features()
+            "events": events,
+            "event_features": self._world._get_event_features(events)
         }
 
         return obs, reward, done, False, info
@@ -56,9 +58,11 @@ class CookieWorldEnv(gym.Env):
 
         self._world = CookieWorld(self._params, seed=seed)
         obs = self._world._get_map_features()
+
+        events = self._world.get_events()
         info = {
-            "events": self._world.get_events(),
-            "event_features": self._world._get_event_features()
+            "events": events,
+            "event_features": self._world._get_event_features(events)
         }
 
         return obs, info
@@ -70,6 +74,10 @@ class CookieWorldEnv(gym.Env):
     def get_all_events(self):
 
         return self._world.get_all_events()
+
+    def get_event_features(self, events):
+
+        return self._world._get_event_features(events)
 
 
 class KeysWorldEnv(gym.Env):
@@ -97,9 +105,11 @@ class KeysWorldEnv(gym.Env):
 
         reward, done = self._world.execute_action(action)
         obs = self._world._get_map_features()
+
+        events = self._world.get_events()
         info = {
-            "events": self._world.get_events(),
-            "event_features": self._world._get_event_features()
+            "events": events,
+            "event_features": self._world._get_event_features(events)
         }
 
         return obs, reward, done, False, info
@@ -110,9 +120,11 @@ class KeysWorldEnv(gym.Env):
 
         self._world = KeysWorld(self._params, seed=seed)
         obs = self._world._get_map_features()
+
+        events = self._world.get_events()
         info = {
-            "events": self._world.get_events(),
-            "event_features": self._world._get_event_features()
+            "events": events,
+            "event_features": self._world._get_event_features(events)
         }
 
         return obs, info
@@ -124,6 +136,10 @@ class KeysWorldEnv(gym.Env):
     def get_all_events(self):
 
         return self._world.get_all_events()
+
+    def get_event_features(self, events):
+
+        return self._world._get_event_features(events)
 
 
 class SymbolWorldEnv(gym.Env):
@@ -142,9 +158,11 @@ class SymbolWorldEnv(gym.Env):
 
         reward, done = self._world.execute_action(action)
         obs = self._world._get_map_features()
+
+        events = self._world.get_events()
         info = {
-            "events": self._world.get_events(),
-            "event_features": self._world._get_event_features()
+            "events": events,
+            "event_features": self._world._get_event_features(events)
         }
 
         return obs, reward, done, False, info
@@ -155,9 +173,11 @@ class SymbolWorldEnv(gym.Env):
 
         self._world = SymbolWorld(self._params, seed=seed)
         obs = self._world._get_map_features()
+
+        events = self._world.get_events()
         info = {
-            "events": self._world.get_events(),
-            "event_features": self._world._get_event_features()
+            "events": events,
+            "event_features": self._world._get_event_features(events)
         }
 
         return obs, info
@@ -169,6 +189,10 @@ class SymbolWorldEnv(gym.Env):
     def get_all_events(self):
 
         return self._world.get_all_events()
+
+    def get_event_features(self, events):
+
+        return self._world._get_event_features(events)
 
 
 register_env_gym(id='CookieWorld-v0', entry_point="environments:CookieWorldEnv")
