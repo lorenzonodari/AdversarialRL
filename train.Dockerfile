@@ -2,7 +2,7 @@
 FROM rayproject/ray-ml:2.3.0-py310-gpu
 
 # Build-time arguments
-ARG n_runs=10
+ARG n_runs
 ARG session_name
 ARG scenario
 ARG config
