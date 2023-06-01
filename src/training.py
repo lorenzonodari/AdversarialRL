@@ -120,12 +120,13 @@ def train_lrm_agent(env, n_runs, session_name, config_file):
 
     }
 
-    try:
+    if env in scenarios:
 
         train_function = scenarios[env]
         train_function(n_runs, session_name, config_file)
 
-    except KeyError:
+    else:
+
         print(f'Requested environment "{env}" not found in available training scenarios')
 
 
