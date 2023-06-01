@@ -30,7 +30,11 @@ class CookieWorldEnv(gym.Env):
         self._seed = seed
         self._params = GridWorldParams('cookieworld', 'maps/cookie.txt', 0.05)  # Movement noise = 5%
         self._world = None
-        self._perfect_rm = CookieWorld(self._params).get_perfect_rm()
+
+        # Create one instance of underlying world to get informations
+        world = CookieWorld(self._params)
+        self._perfect_rm = world.get_perfect_rm()
+        self._all_events = world.get_all_events()
 
         self.action_space = gym.spaces.Discrete(4, seed=self._seed)  # Up, Right, Down, Left
         self.observation_space = gym.spaces.Box(low=0.0, high=1.0, shape=(248,), seed=self._seed)
@@ -73,7 +77,7 @@ class CookieWorldEnv(gym.Env):
 
     def get_all_events(self):
 
-        return self._world.get_all_events()
+        return self._all_events
 
     def get_event_features(self, events):
 
@@ -96,7 +100,11 @@ class KeysWorldEnv(gym.Env):
         self._seed = seed
         self._params = GridWorldParams('keysworld', 'maps/2-keys.txt', 0.05)  # Movement noise
         self._world = None
-        self._perfect_rm = KeysWorld(self._params).get_perfect_rm()
+
+        # Create one instance of underlying world to get informations
+        world = KeysWorld(self._params)
+        self._perfect_rm = world.get_perfect_rm()
+        self._all_events = world.get_all_events()
 
         self.action_space = gym.spaces.Discrete(4, seed=self._seed)  # Up, Right, Down, Left
         self.observation_space = gym.spaces.Box(low=0.0, high=1.0, shape=(270,), seed=self._seed)
@@ -135,7 +143,7 @@ class KeysWorldEnv(gym.Env):
 
     def get_all_events(self):
 
-        return self._world.get_all_events()
+        return self._all_events
 
     def get_event_features(self, events):
 
@@ -149,7 +157,11 @@ class SymbolWorldEnv(gym.Env):
         self._seed = seed
         self._params = GridWorldParams('symbolworld', 'maps/symbol.txt', 0.05)
         self._world = None
-        self._perfect_rm = SymbolWorld(self._params).get_perfect_rm()
+
+        # Create one instance of underlying world to get informations
+        world = SymbolWorld(self._params)
+        self._perfect_rm = world.get_perfect_rm()
+        self._all_events = world.get_all_events()
 
         self.action_space = gym.spaces.Discrete(4, seed=self._seed)
         self.observation_space = gym.spaces.Box(low=0.0, high=1.0, shape=(512,), seed=self._seed)
@@ -188,7 +200,7 @@ class SymbolWorldEnv(gym.Env):
 
     def get_all_events(self):
 
-        return self._world.get_all_events()
+        return self._all_events
 
     def get_event_features(self, events):
 
