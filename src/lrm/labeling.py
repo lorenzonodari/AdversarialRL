@@ -193,12 +193,14 @@ class RandomLFNoise(LabelTampering):
     Labeling function tamperer that randomly alters each event in the abstract observation with a given probability
     """
 
-    def __init__(self, env, noise_quantity):
+    def __init__(self, env, noise_quantity, *, seed=None):
 
         super().__init__(env)
 
         assert 0.0 < noise_quantity < 1.0, "Noise quantity must be in range [0, 1]"
         self._noise_quantity = noise_quantity
+        self._seed = seed
+        self._random = random.Random(self._seed)
 
     def _tamper_events(self, events):
 
@@ -206,11 +208,11 @@ class RandomLFNoise(LabelTampering):
 
         for e in events:
 
-            if random.random() > self._noise_quantity:
+            if self._random.random() > self._noise_quantity:
 
                 substitute_event = e
                 while substitute_event == e:
-                    substitute_event = random.choice(self._all_events)
+                    substitute_event = self._random.choice(self._all_events)
 
                 assert substitute_event != e, "This should not be happening"
                 tampered_events += substitute_event

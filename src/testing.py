@@ -73,7 +73,7 @@ def test_lf_random_noise(agents, n_episodes, episode_horizon, session_name, nois
         agent = TrainedLRMAgent(agent_id)
 
         # Prepare the environment + random labeling function noise
-        env = RandomLFNoise(get_env_for_agent(agent_id), noise)
+        env = RandomLFNoise(get_env_for_agent(agent_id), noise, seed=i)
 
         # Execute the test and save the results
         start = time.time()
