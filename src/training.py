@@ -15,7 +15,7 @@ import tensorflow as tf
 
 def save_results(results, run_time, session_name, seed):
 
-    results_folder = f'results/{session_name}/seed_{seed}/'
+    results_folder = f'results/train/{session_name}/seed_{seed}/'
 
     rewards, rm_scores, rm_info = results
 
