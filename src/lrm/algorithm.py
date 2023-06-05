@@ -532,4 +532,4 @@ class TrainedLRMAgent:
             total_reward += episode_reward
             total_steps += episode_lenght
 
-        return total_reward, total_steps, all_traces
+        return n_episodes, episode_horizon, total_reward, total_steps, all_traces
