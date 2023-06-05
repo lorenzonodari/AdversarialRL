@@ -87,12 +87,6 @@ class CookieWorldEnv(gym.Env):
 class KeysWorldEnv(gym.Env):
     """
     Gymnasium-compliant implementation of 2-KeysWorld from Icarte et al.
-
-    This class simply wraps the original implementation of the environment in order to comply with Gymnasium APIs.
-    NB: Note that this environment has no terminal state: the agent can continue to act indefinitely.
-    Nonetheless, the original author assumes a maximum episode length of 5000 steps during its experiments.
-    This is achieved, however, by resorting to means that are external to this class.
-
     """
 
     def __init__(self, *, seed=None):
@@ -151,6 +145,9 @@ class KeysWorldEnv(gym.Env):
 
 
 class SymbolWorldEnv(gym.Env):
+    """
+    Gymnasium-compliant implementation of SymbolWorld from Icarte et al.
+    """
 
     def __init__(self, *, seed=None):
 
