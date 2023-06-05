@@ -7,6 +7,7 @@ import argparse
 import tensorflow as tf
 
 from lrm.algorithm import TrainedLRMAgent
+from lrm.labeling import RandomLFNoise
 from environments import CookieWorldEnv, KeysWorldEnv, SymbolWorldEnv
 
 
@@ -62,11 +63,23 @@ def test_lf_baseline(agents, n_episodes, episode_horizon, session_name):
         save_results(results, run_time, session_name, agent_id, seed=i)
 
 
-def test_lf_random_noise(agents, n_episodes, episode_horizon, session_name, *, noise):
+def test_lf_random_noise(agents, n_episodes, episode_horizon, session_name, noise):
 
     assert 0.0 < noise < 1.0, "Noise quantity must be in range [0,1]"
-    # TODO: Implement
-    pass
+
+    for i, agent_id in enumerate(agents):
+
+        # Load the agent
+        agent = TrainedLRMAgent(agent_id)
+
+        # Prepare the environment + random labeling function noise
+        env = RandomLFNoise(get_env_for_agent(agent_id), noise)
+
+        # Execute the test and save the results
+        start = time.time()
+        results = agent.test(env, n_episodes, episode_horizon, seed=i)
+        run_time = int(time.time() - start)
+        save_results(results, run_time, session_name, agent_id, seed=i)
 
 
 def test_lf_blinding_attack(agents):
@@ -86,7 +99,7 @@ def test_lrm_agent(cli_args):
 
     elif cli_args.test == 'randomlf':
 
-        pass
+        test_lf_random_noise(agents, cli_args.n_episodes, cli_args.max_episode_length, cli_args.session, cli_args.noise)
 
     else:
 
