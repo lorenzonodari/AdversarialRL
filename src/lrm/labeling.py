@@ -221,3 +221,69 @@ class RandomLFNoise(LabelTampering):
                 tampered_events += e
 
         return tampered_events
+
+
+class SimpleBlindingAttack(LabelTampering):
+    """
+    Implementation of the tampering part of the one-time Blinding Attack on RM-based agents.
+
+    This tamperer works by removing a specific set of events from the labelling function output, starting
+    from the n-th time it appears and reverting to no tampering at all as soon as a different set of event is detected.
+    In other words, this tamperer eliminates the n-th occurrence, in the event sequence, of a subsequence of identical,
+    consecutive events.
+    """
+
+    def __init__(self, env, target, appearance):
+        """
+
+        :param env: The environment to be wrapped
+        :param target: The set of events to be tampered with
+        :param appearance: The appearance index (1-based) when the given events must be tampered with
+        """
+
+        super().__init__(env)
+
+        assert appearance > 0, 'Appearance index must be at least 1'
+
+        self._target = target  # Subset of events we want to attack
+        self._target_appearance = appearance  # Appearance index we want to tamper
+        self._times_seen = 0  # Number of times we saw our target, not counting consecutive appearances
+        self._still_present = False  # True if our target was seen in the previous LF output
+        self._tampering = False  # True if we have begun tampering
+        self._done = False  # True if the attack has already been carried out
+
+    def _tamper_events(self, events):
+
+        # If the attack has already been done, do not tamper
+        if self._done:
+            return events
+
+        # Check if all the target events are present: if not, we do not tamper this abstract observation
+        for e in self._target:
+
+            if e not in events:
+
+                # The target is no longer detected
+                self._still_present = False
+
+                # If we had already started tampering, we can now stop as the target is no longer detected.
+                if self._tampering:
+                    self._tampering = False
+                    self._done = True
+
+                return events
+
+        # We detected our target after not detecting it: increment the number of times we saw it
+        if not self._still_present:
+            self._times_seen += 1
+            self._still_present = True
+
+        # If the number of times we saw it matches the requested appearance index, we can tamper
+        # Alternatively, if we already started tampering and the target is still detected, continue tampering
+        if self._target_appearance == self._times_seen or self._tampering:
+
+            self._tampering = True
+            return "".join([e for e in events if e not in self._target])
+
+        # It is not yet time to carry out the attack, do not tamper
+        return events
