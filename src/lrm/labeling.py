@@ -152,6 +152,7 @@ class LabelTampering(gym.Wrapper):
         super().__init__(env)
 
         self._all_events = env.get_all_events()
+        self._n_tamperings = 0
 
     def _tamper_events(self, events):
         """
@@ -181,11 +182,23 @@ class LabelTampering(gym.Wrapper):
         true_events = info['events']
         tampered_events = self._tamper_events(true_events)
 
+        if tampered_events != true_events:
+            self._n_tamperings += 1
+
         # Substitute the event string and event features vector in step() output
         info['events'] = tampered_events
         info['event_features'] = self.get_event_features(tampered_events)
 
         return obs, reward, terminated, truncated, info
+
+    @property
+    def n_tamperings(self):
+        """
+        Returns the number of this tamperer has modified the labelling function output so far.
+
+        :return: Number of labelling function output tamperings so far
+        """
+        return self._n_tamperings
 
 
 class RandomLFNoise(LabelTampering):
