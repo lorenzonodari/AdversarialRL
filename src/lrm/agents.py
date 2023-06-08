@@ -448,11 +448,14 @@ class TrainedLRMAgent:
         Update the internal RM state of the agent
 
         :param events: The events observed in the environment after the last action
+        :return: The agent's RM state after the update
         """
 
         assert self._rm_state is not None, "The agent must be reset before being used"
 
         self._rm_state = self._rm.get_next_state(self._rm_state, events)
+
+        return self._rm_state
 
     def reset(self):
         """
@@ -460,9 +463,13 @@ class TrainedLRMAgent:
 
         This need to be called every time a new episode starts, in order to make sure
         that the agent's RM is in its initial state.
+
+        :return: The agent's initial RM state
         """
 
         self._rm_state = self._rm.get_initial_state()
+
+        return self._rm_state
 
     def close(self):
 
@@ -498,13 +505,14 @@ class TrainedLRMAgent:
             obs_features = np.concatenate((obs, info["event_features"]), axis=None)
 
             # New episode: reset the agent's RM
-            self.reset()
+            initial_rm_state = self.reset()
 
             # Episode trace data
-            event_sequence = [info["events"]]
+            transitions = [(initial_rm_state, info["events"], initial_rm_state)]
             episode_reward = 0
             episode_lenght = 0
 
+            current_rm_state = initial_rm_state
             done = False
             while not done:
 
@@ -516,18 +524,21 @@ class TrainedLRMAgent:
                 obs_features = np.concatenate((obs, info["event_features"]), axis=None)
 
                 # Update RM state
-                self.update_rm_state(info["events"])
+                new_rm_state = self.update_rm_state(info["events"])
 
-                # Update event_sequence, episode reward and lenght
-                event_sequence.append(info["events"])
+                # Update transitions sequence, episode reward and lenght
+                transitions.append((current_rm_state, info["events"], new_rm_state))
                 episode_reward += reward
                 episode_lenght += 1
 
                 # Check for episode termination
                 done = terminated or truncated
 
-            # Update total reward, total steps and traces
-            current_trace = event_sequence, (episode_reward, episode_lenght)
+                # Update current state
+                current_rm_state = new_rm_state
+
+            # Update total reward, total steps and traces data
+            current_trace = transitions, (episode_reward, episode_lenght)
             all_traces.append(current_trace)
             total_reward += episode_reward
             total_steps += episode_lenght

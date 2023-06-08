@@ -12,13 +12,13 @@ def gather_traces(session_name):
     """
     Merge multiple sources of event traces into one single set.
 
-    This function allows one to merge all the event traces obtained by various calls to
+    This function allows one to merge all the transition histories obtained by various calls to
     TrainedLRMAgent.test() into one single set. More specifically, the current interface of this function
     allows one to specify the name of a testing session: all the traces that were produced by testing
     the agents in the given session will be grouped and returned into a single set.
 
     :param session_name: The name of the testing session to be used as the traces source
-    :return: A list containing all the event traces from the given session
+    :return: A list containing all the traces from the given session
     """
 
     all_traces = []
@@ -32,19 +32,20 @@ def gather_traces(session_name):
 
         all_traces.extend(traces)
 
-    # Convert each trace element from lists to tuples to allow for comparison
-    all_traces = [(tuple(t[0]), tuple(t[1])) for t in all_traces]
+    # Convert every list to a tuple to allow for comparisons
+    all_traces = [(tuple([tuple(t) for t in h]), tuple(p)) for h, p in all_traces]
+
     return all_traces
 
 
-def clean_duplicate_event_sequences(traces):
+def clean_duplicate_histories(traces):
     """
-    Compute the frequency of each unique event sequence and clean the traces accordingly.
+    Compute the frequency of each unique transition history and clean the traces accordingly.
 
-    Given a list of traces, where each of them is a tuple (event_sequence, (episode_reward, episode_steps)),
-    this function creates a new list of traces where each unique event_sequence appears at most once. To do so,
-    the frequency of each event sequence in the original trace is computed and a new list of traces is returned,
-    each now in the form: (unique_event_sequence, (frequency, average_reward, average_steps))
+    Given a list of traces, where each of them is a tuple (transitions, (episode_reward, episode_steps)),
+    this function creates a new list of traces where each unique transition sequence appears at most once.
+    To do so, the frequency of each of them in the original trace is computed and a new list of traces is returned,
+    each now in the form: (unique_transition_sequence, (frequency, average_reward, average_steps))
 
     :param traces: The list of traces to be processed
     :return: The processed list of traces
@@ -52,15 +53,15 @@ def clean_duplicate_event_sequences(traces):
 
     clean_traces = []
 
-    evt_sequences = set([t[0] for t in traces])
-    for evt_seq in evt_sequences:
+    transition_histories = set([t for t, _ in traces])
+    for transitions in transition_histories:
 
-        associated_performances = [t[1] for t in traces if t[0] == evt_seq]
+        associated_performances = [p for t, p in traces if t == transitions]
         frequency = len(associated_performances)
         avg_reward = sum([p[0] for p in associated_performances]) / frequency
         avg_steps = sum([p[1] for p in associated_performances]) / frequency
 
-        clean_trace = evt_seq, (frequency, avg_reward, avg_steps)
+        clean_trace = transitions, (frequency, avg_reward, avg_steps)
         clean_traces.append(clean_trace)
 
     return clean_traces
@@ -84,37 +85,28 @@ def sort_traces(traces):
     return traces
 
 
-def compress_event_sequences(traces):
+def compress_transition_histories(traces):
     """
-    Compress the event sequence of each trace by eliminating repeated consecutive entries.
-
-    This function aims at simplifying the event sequence contained in each trace by compressing it as follows:
-
-        e.g: 'a', 'a', 'a', 'b', 'b', 'a -> 'a', 'b', 'a'
-
-    More specifically, repeated events are simply kept once every time they appear.
+    Compress the transition sequences of each trace by eliminating duplicated entries.
 
     :param traces: The traces to be compressed
     :return: The compressed traces
     """
 
     compressed_traces = []
-    for trace in traces:
+    for history, performance in traces:
 
-        compressed_evt_sequence = []
+        compressed_history = []
 
-        evt_sequence = trace[0]
-        current_evt = None
+        current_transition = None
+        for transition in history:
 
-        # Compress the event sequence
-        for evt in evt_sequence:
-
-            if evt != current_evt:
-                compressed_evt_sequence.append(evt)
-                current_evt = evt
+            if transition != current_transition:
+                compressed_history.append(transition)
+                current_transition = transition
 
         # Re-add performance data to the trace
-        compressed_trace = tuple(compressed_evt_sequence), trace[1]
+        compressed_trace = tuple(compressed_history), performance
         compressed_traces.append(compressed_trace)
 
     return compressed_traces
@@ -134,22 +126,21 @@ def find_event_blinding_strategies(traces, *,
     the target string is always removed form the labelling function output.
 
     :param traces: The traces to be used to determine potential attack options
-    :param use_compound_events: If True, use the event strings as they appear in the traces as potential targets.
-                                If False, use atomic events as potential targets.
+    :param use_compound_events: If True, also use the event strings as they appear in the traces as potential targets.
+                                If False, use only the atomic events as potential targets.
     :return: Two list of potential attack options ie: [(target1, index1), ..., (targetn, indexn)]
     """
 
+    # Extract the event sequences from the transition history of each trace
+    event_sequences = [[e for _, e, _ in h] for h, _ in traces]
+
     # Determine unique event strings found in the traces
-    event_sequences = [t[0] for t in traces]
     unique_event_strings = set(itertools.chain(*event_sequences))
+    chained_event_strings = "".join(unique_event_strings)
+    potential_targets = set(chained_event_strings)  # Get unique characters ie: events
 
-    if not use_compound_events:
-
-        chained_event_strings = "".join(unique_event_strings)
-        potential_targets = set(chained_event_strings)  # Get unique characters ie: events
-
-    else:
-        potential_targets = unique_event_strings
+    if use_compound_events:
+        potential_targets |= unique_event_strings
 
     # First, we consider permanent strategies, where we choose to attack every occurrence of the target
     permanent_strategies = [(t, None) for t in potential_targets]
@@ -201,8 +192,8 @@ def rank_event_blinding_strategies(victim_id,
 
     # Pre-process the traces
     if compression:
-        traces = compress_event_sequences(traces)
-    traces = clean_duplicate_event_sequences(traces)
+        traces = compress_transition_histories(traces)
+    traces = clean_duplicate_histories(traces)
     traces = sort_traces(traces)
 
     # Compute possible attack strategies
