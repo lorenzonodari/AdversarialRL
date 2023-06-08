@@ -247,6 +247,8 @@ class EventBlindingAttack(LabelTampering):
 
     Alternatively, this tamperer also allows for permanent Event Blinding Attacks, where the target events are always
     removed from the labelling function output, regardless of the number of times they have already appeared.
+
+    NB: In order for the tampering to happen, the labelling function output must contain ALL the target events
     """
 
     def __init__(self, env, target_events, appearance=None):
@@ -265,7 +267,7 @@ class EventBlindingAttack(LabelTampering):
         self._target = target_events  # Subset of events we want to attack
         self._target_appearance = appearance  # Appearance index we want to tamper
 
-        # Internal state for one-time attacks
+        # Internal state for timed attacks
         self._times_seen = 0  # Number of times we saw our target, not counting consecutive appearances
         self._still_present = False  # True if our target was seen in the previous LF output
         self._tampering = False  # True if we have begun tampering
@@ -320,4 +322,14 @@ class EventBlindingAttack(LabelTampering):
         else:
 
             return self._tamper_events_once(events)
+
+    def reset(self, **kwargs):
+
+        # Reset internal state
+        self._times_seen = 0
+        self._done = False
+        self._tampering = False
+        self._still_present = False
+
+        return self.env.reset(**kwargs)
 
