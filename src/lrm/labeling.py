@@ -236,36 +236,46 @@ class RandomLFNoise(LabelTampering):
         return tampered_events
 
 
-class SimpleBlindingAttack(LabelTampering):
+class EventBlindingAttack(LabelTampering):
     """
-    Implementation of the tampering part of the one-time Blinding Attack on RM-based agents.
+    Implementation of the tampering part of the Event Blinding Attack on RM-based agents.
 
     This tamperer works by removing a specific set of events from the labelling function output, starting
     from the n-th time it appears and reverting to no tampering at all as soon as a different set of event is detected.
     In other words, this tamperer eliminates the n-th occurrence, in the event sequence, of a subsequence of identical,
     consecutive events.
+
+    Alternatively, this tamperer also allows for permanent Event Blinding Attacks, where the target events are always
+    removed from the labelling function output, regardless of the number of times they have already appeared.
     """
 
-    def __init__(self, env, target, appearance):
+    def __init__(self, env, target_events, appearance=None):
         """
 
         :param env: The environment to be wrapped
-        :param target: The set of events to be tampered with
-        :param appearance: The appearance index (1-based) when the given events must be tampered with
+        :param target_events: The set of events to be tampered with
+        :param appearance: The appearance index (1-based) when the given events must be tampered with, or None.
+                           If None, the target_events will always be removed by the labeling function output
         """
 
         super().__init__(env)
 
-        assert appearance > 0, 'Appearance index must be at least 1'
+        assert appearance is None or appearance > 0, 'Appearance index must be at least 1, or None'
 
-        self._target = target  # Subset of events we want to attack
+        self._target = target_events  # Subset of events we want to attack
         self._target_appearance = appearance  # Appearance index we want to tamper
+
+        # Internal state for one-time attacks
         self._times_seen = 0  # Number of times we saw our target, not counting consecutive appearances
         self._still_present = False  # True if our target was seen in the previous LF output
         self._tampering = False  # True if we have begun tampering
         self._done = False  # True if the attack has already been carried out
 
-    def _tamper_events(self, events):
+    def _tamper_events_always(self, events):
+
+        return "".join([e for e in events if e not in self._target])
+
+    def _tamper_events_once(self, events):
 
         # If the attack has already been done, do not tamper
         if self._done:
@@ -300,3 +310,14 @@ class SimpleBlindingAttack(LabelTampering):
 
         # It is not yet time to carry out the attack, do not tamper
         return events
+
+    def _tamper_events(self, events):
+
+        if self._target_appearance is None:
+
+            return self._tamper_events_always(events)
+
+        else:
+
+            return self._tamper_events_once(events)
+
