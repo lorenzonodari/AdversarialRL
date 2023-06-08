@@ -333,3 +333,133 @@ class EventBlindingAttack(LabelTampering):
 
         return self.env.reset(**kwargs)
 
+
+class EdgeBlindingAttack(LabelTampering):
+    """
+    Implementation of the tampering part of the Edge-based Blinding Attack on RM-based agents.
+
+    This tamperer works by targeting a set of agent's RM transitions: each time one of the target
+    transitions would trigger, the output of the labelling function is modified in order to avoid
+    the triggering of the transition.
+
+    This attack can be also be seen as the generalization of the State-based Blinding Attack, where
+    the attacker aims at preventing the agent's RM to reach a specific state, as this could be obtained
+    by the attacker by simply targeting every transition that would lead to the target state.
+
+    As for the Event-based variation of the Blinding attack, the Event-based Blinding attacks also supports
+    two variations: the timed variation, where the targets are attacked only ad a specific appearance index,
+    and the persistent one, where the targets are always tampered with.
+    """
+
+    def __init__(self, env, agent_rm, target_transitions, appearance=None):
+        """
+        Initialize the Edge-based Blinding Attack tamperer
+
+        NB: Instances of this class require the agent's RM in order to properly work. This, however, is due to
+        the current design of the LabelTrampering._tamper_events() method, which only receives the output of the
+        labelling function as an argument: in theory the attack only needs the current agent's RM state. However, since
+        passing that information is not allowed by the current API, this workaround is used.
+
+        :param env: The environment to be wrapped
+        :param agent_rm: The agent's reward machine
+        :param target_transitions: The set of transitions to be tampered with
+        :param appearance: The appearance index to be targeted. If None, target every appearance of the targets
+        """
+
+        super().__init__(env)
+
+        assert appearance is None or appearance > 0, 'Appearance index must be at least 1, or None'
+
+        self._rm = agent_rm
+        self._target_transitions = target_transitions
+        self._appearance = appearance
+
+        # Internal RM state
+        self._rm_state = None
+
+        # Internal state for timed attacks
+        self._times_seen = 0
+        self._done = False
+
+    def reset(self, **kwargs):
+
+        # Reset the internal state
+        self._rm_state = self._rm.get_initial_state()
+        self._times_seen = 0
+        self._done = False
+
+        # Reset the underlying environment
+        return self.env.reset(**kwargs)
+
+    def _update_rm_state(self, events):
+
+        self._rm_state = self._rm.get_next_state(self._rm_state, events)
+
+    def _tamper_events_once(self, events):
+
+        if self._done:
+
+            self._update_rm_state(events)
+            return events
+
+        sorted_events = "".join(sorted(events))
+
+        # Check every target_transition
+        for required_state, required_events, _ in self._target_transitions:
+
+            required_events = "".join(sorted(required_events))
+
+            # One of our target transitions is applicable: check if it is time to tamper
+            if required_state == self._rm_state and required_events in sorted_events:
+
+                self._times_seen += 1
+
+                # We reached the required appearance index: tamper
+                if self._times_seen == self._appearance:
+
+                    # Generate the tampered labelling output
+                    tampered_events = sorted_events.replace(required_events, "")
+
+                    # We finally tampered, no need to tamper again in the future
+                    self._done = True
+
+                    # Update RM state and return tampered labelling function output
+                    self._update_rm_state(tampered_events)
+                    return tampered_events
+
+        # None of the target transitions was detected, or it wasn't time to tamper
+        self._update_rm_state(events)
+        return events
+
+    def _tamper_events_always(self, events: str):
+
+        sorted_events = "".join(sorted(events))
+
+        # Check every target transition
+        for required_state, required_events, _ in self._target_transitions:
+
+            required_events = "".join(sorted(required_events))
+
+            # The requirements for this transition are satisfied: tamper
+            if required_state == self._rm_state and required_events in sorted_events:
+
+                # Generate tampered labelling output
+                tampered_events = sorted_events.replace(required_events, "")
+
+                # Update internal RM state
+                self._update_rm_state(tampered_events)
+                return tampered_events
+
+        # None of the target transitions was triggered: do not tamper
+        self._update_rm_state(events)
+        return events
+
+    def _tamper_events(self, events):
+
+        if self._appearance is None:
+
+            return self._tamper_events_always(events)
+
+        else:
+
+            return self._tamper_events_once(events)
