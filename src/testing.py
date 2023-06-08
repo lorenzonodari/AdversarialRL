@@ -6,7 +6,7 @@ import argparse
 
 import tensorflow as tf
 
-from lrm.algorithm import TrainedLRMAgent
+from lrm.agents import TrainedLRMAgent
 from lrm.labeling import RandomLFNoise
 from environments import CookieWorldEnv, KeysWorldEnv, SymbolWorldEnv
 

@@ -2,7 +2,7 @@ import os
 import json
 import itertools
 
-from lrm.algorithm import TrainedLRMAgent
+from lrm.agents import TrainedLRMAgent
 from lrm.labeling import EventBlindingAttack
 
 from testing import get_env_for_agent

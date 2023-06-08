@@ -4,7 +4,7 @@ import os
 import csv
 import multiprocessing
 
-from lrm.algorithm import LRMTrainer, original_lrm_implementation
+from lrm.agents import LRMTrainer, original_lrm_implementation
 from lrm.config import LRMConfig
 from environments import CookieWorldEnv, KeysWorldEnv, SymbolWorldEnv
 from environments.game import Game, GameParams
