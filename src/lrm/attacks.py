@@ -117,12 +117,12 @@ def find_event_blinding_strategies(traces, *,
     """
     Given a set of traces, compute the possible options to carry out an Event Blinding Attack.
 
-    An option for an Event Blinding Attack is simply a tuple (target_events, appearance_index), where:
+    An option for a timed Event Blinding Attack is simply a tuple (target_events, appearance_index), where:
 
     - target_events is a subset of all possible events;
     - appearance_index is the index of the target events appearance that we are targeting
 
-    Alternatively, an appearance_index = None represent the case of a permanent Event Blinding Attack, where
+    Alternatively, an appearance_index = None represent the case of a persistent Event Blinding Attack, where
     the target string is always removed form the labelling function output.
 
     :param traces: The traces to be used to determine potential attack options
@@ -143,7 +143,7 @@ def find_event_blinding_strategies(traces, *,
         potential_targets |= unique_event_strings
 
     # First, we consider permanent strategies, where we choose to attack every occurrence of the target
-    permanent_strategies = [(t, None) for t in potential_targets]
+    persistent_strategies = [(t, None) for t in potential_targets]
 
     # Then determine observed appearance indexes for each target to determine potential
     # timed attack strategies
@@ -176,7 +176,7 @@ def find_event_blinding_strategies(traces, *,
     timed_strategies = sorted(timed_strategies, key=lambda x: x[1], reverse=True)
     timed_strategies = [s for s, _ in timed_strategies]  # Discard frequency info
 
-    return timed_strategies, permanent_strategies
+    return timed_strategies, persistent_strategies
 
 
 def rank_event_blinding_strategies(victim_id,
@@ -197,8 +197,8 @@ def rank_event_blinding_strategies(victim_id,
     traces = sort_traces(traces)
 
     # Compute possible attack strategies
-    timed_strats, permanent_strats = find_event_blinding_strategies(traces, use_compound_events=use_compound_events)
-    strategies = timed_strats + permanent_strats
+    timed_strats, persistent_strats = find_event_blinding_strategies(traces, use_compound_events=use_compound_events)
+    strategies = timed_strats + persistent_strats
 
     # Now test each strategy in order, to rank them
     scores = {s: None for s in strategies}
