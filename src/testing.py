@@ -13,6 +13,8 @@ from environments import CookieWorldEnv, KeysWorldEnv, SymbolWorldEnv
 
 def get_env_for_agent(agent_id):
 
+    # TODO: Refactor directly into TrainedLRMAgent
+
     if "_cw_" in agent_id:
         return CookieWorldEnv()
     elif "_kw_" in agent_id:
