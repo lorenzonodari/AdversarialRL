@@ -368,6 +368,9 @@ class EdgeBlindingAttack(LabelTampering):
 
         super().__init__(env)
 
+        if not isinstance(target_transitions, list):
+            target_transitions = [target_transitions]
+
         assert appearance is None or appearance > 0, 'Appearance index must be at least 1, or None'
 
         self._rm = agent_rm
