@@ -3,7 +3,7 @@ import json
 import itertools
 
 from lrm.agents import TrainedLRMAgent
-from lrm.labeling import EventBlindingAttack
+from lrm.labeling import EventBlindingAttack, EdgeBlindingAttack
 
 from testing import get_env_for_agent
 
@@ -179,6 +179,48 @@ def find_event_blinding_strategies(traces, *,
     return timed_strategies, persistent_strategies
 
 
+def find_edge_blinding_strategies(traces, *, target_states=False):
+    """
+
+    Given a set of traces, compute the possible strategies to carry an Edge Blinding Attack.
+
+    Since our benchmark environments lead to perfect RMs that have no loops, the same transition can't happen
+    more than once in every episode. For this reason, this method only finds persistent strategies.
+    TODO: Generalize to arbitraty environments -> implement timed strategies computation
+
+    :param traces: The traces to be used to determine potential attack strategies
+    :param target_states: If True, find strategies for a State Blinding Attack
+    :return: A list of potential attack strategies
+    """
+
+    transition_histories = [th for th, _ in traces]
+
+    # Determine unique transitions found in traces
+    unique_transitions = set(itertools.chain(*transition_histories))
+
+    # Generic Edge-based attack
+    if not target_states:
+
+        # Exclude transitions that do not change the RM state
+        potential_targets = [t for t in unique_transitions if t[0] != t[2]]
+
+    # State-based attack
+    else:
+
+        potential_targets = []
+        target_states = {reached_state for _, _, reached_state in unique_transitions}
+
+        for state in target_states:
+
+            entering_transitions = [t for t in unique_transitions if t[2] == state]
+            potential_targets.append(entering_transitions)
+
+    # Persistent strategies, where we attack every occurrence of the target transition
+    persistent_strategies = [(t, None) for t in potential_targets]
+
+    return persistent_strategies
+
+
 def rank_event_blinding_strategies(victim_id,
                                    traces, *,
                                    use_compound_events=False,
@@ -214,6 +256,47 @@ def rank_event_blinding_strategies(victim_id,
     ranked_strategies = [(s, scores[s]) for s in strategies]
 
     # Sort the ranked_strategies: worse agent performance -> better strategy, more tamperings -> worse strategy
+    ranked_strategies = sorted(ranked_strategies, key=lambda s: s[1][2])  # Ascending number of tamperings
+    ranked_strategies = sorted(ranked_strategies, key=lambda s: s[1][1], reverse=True)  # Descending number of steps
+    ranked_strategies = sorted(ranked_strategies, key=lambda s: s[1][0])  # Ascending reward
+
+    return ranked_strategies
+
+
+def rank_edge_blinding_strategies(victim_id,
+                                  traces, *,
+                                  target_states=False,
+                                  compression=True,
+                                  trials_per_strategy=100,
+                                  episode_length=500):
+
+    victim = TrainedLRMAgent(victim_id)
+    base_env = get_env_for_agent(victim_id)
+
+    if compression:
+        traces = compress_transition_histories(traces)
+    traces = clean_duplicate_histories(traces)
+    traces = sort_traces(traces)
+
+    # Compute potential attack strategies
+    if not target_states:
+        strategies = find_edge_blinding_strategies(traces)
+    else:
+        strategies = find_edge_blinding_strategies(traces, target_states=True)
+
+    scores = {s: None for s in strategies}
+    for strat in strategies:
+
+        target, _ = strat
+        env = EdgeBlindingAttack(base_env, victim._rm, target)
+
+        _, _, strat_reward, strat_steps, strat_traces = victim.test(env, trials_per_strategy, episode_length)
+        scores[strat] = strat_reward / trials_per_strategy, strat_steps / trials_per_strategy, env.n_tamperings / trials_per_strategy
+
+    # Augment each strategy with its associated score
+    ranked_strategies = [(s, scores[s]) for s in strategies]
+
+    # Sort the ranked strategies: worse agent performance -> better strategy, more tamperings -> worse strategy
     ranked_strategies = sorted(ranked_strategies, key=lambda s: s[1][2])  # Ascending number of tamperings
     ranked_strategies = sorted(ranked_strategies, key=lambda s: s[1][1], reverse=True)  # Descending number of steps
     ranked_strategies = sorted(ranked_strategies, key=lambda s: s[1][0])  # Ascending reward
