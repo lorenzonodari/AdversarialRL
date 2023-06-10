@@ -287,6 +287,8 @@ def rank_edge_blinding_strategies(victim_id,
         strategies = find_edge_blinding_strategies(traces)
     else:
         strategies = find_edge_blinding_strategies(traces, target_states=True)
+        # Convert target transitions list to tuple to allow for dict-key usage
+        strategies = [(tuple(s[0]), s[1]) for s in strategies]
 
     scores = {s: None for s in strategies}
     for strat in strategies:
