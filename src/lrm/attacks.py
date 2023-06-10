@@ -112,6 +112,15 @@ def compress_transition_histories(traces):
     return compressed_traces
 
 
+def preprocess_traces(traces):
+
+    traces = compress_transition_histories(traces)
+    traces = clean_duplicate_histories(traces)
+    traces = sort_traces(traces)
+
+    return traces
+
+
 def find_event_blinding_strategies(traces, *,
                                    use_compound_events=False):
     """
@@ -226,7 +235,7 @@ def find_edge_blinding_strategies(traces, *, target_states=False):
 def rank_event_blinding_strategies(victim_id,
                                    traces, *,
                                    use_compound_events=False,
-                                   compression=True,
+                                   preprocessing=False,
                                    trials_per_strategy=100,
                                    episode_length=500):
 
@@ -235,10 +244,8 @@ def rank_event_blinding_strategies(victim_id,
     base_env = get_env_for_agent(victim_id)
 
     # Pre-process the traces
-    if compression:
-        traces = compress_transition_histories(traces)
-    traces = clean_duplicate_histories(traces)
-    traces = sort_traces(traces)
+    if preprocessing:
+        traces = preprocess_traces(traces)
 
     # Compute possible attack strategies
     timed_strats, persistent_strats = find_event_blinding_strategies(traces, use_compound_events=use_compound_events)
@@ -270,17 +277,15 @@ def rank_event_blinding_strategies(victim_id,
 def rank_edge_blinding_strategies(victim_id,
                                   traces, *,
                                   target_states=False,
-                                  compression=True,
+                                  preprocessing=False,
                                   trials_per_strategy=100,
                                   episode_length=500):
 
     victim = TrainedLRMAgent(victim_id)
     base_env = get_env_for_agent(victim_id)
 
-    if compression:
-        traces = compress_transition_histories(traces)
-    traces = clean_duplicate_histories(traces)
-    traces = sort_traces(traces)
+    if preprocessing:
+        traces = preprocess_traces(traces)
 
     # Compute potential attack strategies
     if not target_states:
