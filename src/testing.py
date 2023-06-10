@@ -64,6 +64,8 @@ def test_lf_baseline(agents, n_episodes, episode_horizon, session_name):
         run_time = int(time.time() - start)
         save_results(results, run_time, session_name, agent_id, seed=i)
 
+        agent.close()
+
 
 def test_lf_random_noise(agents, n_episodes, episode_horizon, session_name, noise):
 
@@ -82,6 +84,8 @@ def test_lf_random_noise(agents, n_episodes, episode_horizon, session_name, nois
         results = agent.test(env, n_episodes, episode_horizon, seed=i)
         run_time = int(time.time() - start)
         save_results(results, run_time, session_name, agent_id, seed=i)
+
+        agent.close()
 
 
 def test_lf_blinding_attack(agents):

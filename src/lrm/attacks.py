@@ -260,6 +260,8 @@ def rank_event_blinding_strategies(victim_id,
     ranked_strategies = sorted(ranked_strategies, key=lambda s: s[1][1], reverse=True)  # Descending number of steps
     ranked_strategies = sorted(ranked_strategies, key=lambda s: s[1][0])  # Ascending reward
 
+    victim.close()
+
     return ranked_strategies
 
 
@@ -300,6 +302,8 @@ def rank_edge_blinding_strategies(victim_id,
     ranked_strategies = sorted(ranked_strategies, key=lambda s: s[1][2])  # Ascending number of tamperings
     ranked_strategies = sorted(ranked_strategies, key=lambda s: s[1][1], reverse=True)  # Descending number of steps
     ranked_strategies = sorted(ranked_strategies, key=lambda s: s[1][0])  # Ascending reward
+
+    victim.close()
 
     return ranked_strategies
 
