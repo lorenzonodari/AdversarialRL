@@ -33,9 +33,9 @@ def format_execution_time(exec_seconds):
     return f'{exec_days} d, {remaining_hours} h'
 
 
-def process_execution_results(session, execution):
+def process_training_results(session, execution):
     """
-    Process the results obtained from a single execution.
+    Process the results obtained from a single training execution.
 
     :param session: The name of the session for this execution
     :param execution: The id of the given execution e.g: seed_42
@@ -75,9 +75,9 @@ def process_execution_results(session, execution):
     return rewards, steps, execution_time_s
 
 
-def process_session_results(sessions: Union[list, str]) -> None:
+def training_session_results(sessions: Union[list, str]) -> None:
     """
-    Process the results for every execution in the given session(s).
+    Process the results for every training execution in the given session(s).
 
     For each run, this function produces:
 
@@ -98,7 +98,7 @@ def process_session_results(sessions: Union[list, str]) -> None:
         session_folder = f'results/{session}'
         for run_folder in [f for f in os.listdir(session_folder) if f.startswith("seed_")]:
 
-            rewards, current_steps, exec_time = process_execution_results(session_folder, run_folder)
+            rewards, current_steps, exec_time = process_training_results(session_folder, run_folder)
             all_rewards.append(rewards)
             all_times.append(exec_time)
 
