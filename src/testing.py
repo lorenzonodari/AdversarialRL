@@ -72,23 +72,23 @@ def test_lf_baseline(agents, n_episodes, episode_horizon, session_name):
         agent.close()
 
 
-def test_lf_random_noise(agents, n_episodes, episode_horizon, session_name, noise):
-
-    assert 0.0 < noise < 1.0, "Noise quantity must be in range [0,1]"
+def test_lf_random_noise(agents, n_episodes, episode_horizon, session_name):
 
     for i, agent_id in enumerate(agents):
 
         # Load the agent
         agent = TrainedLRMAgent(agent_id)
 
-        # Prepare the environment + random labeling function noise
-        env = RandomLFNoise(agent.get_env(), noise, seed=i)
+        for noise in [0.01, 0.05, 0.10, 0.20, 0.30, 0.40, 0.50]:
 
-        # Execute the test and save the results
-        start = time.time()
-        results = agent.test(env, n_episodes, episode_horizon, seed=i)
-        run_time = int(time.time() - start)
-        save_results(results, run_time, session_name, agent_id, seed=i)
+            # Prepare the environment + random labeling function noise
+            env = RandomLFNoise(agent.get_env(), noise, seed=i)
+
+            # Execute the test and save the results
+            start = time.time()
+            results = agent.test(env, n_episodes, episode_horizon, seed=i)
+            run_time = int(time.time() - start)
+            save_results(results, run_time, session_name, f'{agent_id}_noise_{int(noise * 100)}', seed=i)
 
         agent.close()
 
@@ -187,7 +187,7 @@ def test_lrm_agent(cli_args):
 
     elif cli_args.test == 'randomlf':
 
-        test_lf_random_noise(agents, cli_args.n_episodes, cli_args.max_episode_length, cli_args.session, cli_args.noise)
+        test_lf_random_noise(agents, cli_args.n_episodes, cli_args.max_episode_length, cli_args.session)
 
     elif cli_args.test == 'evt-blind':
 
@@ -224,12 +224,6 @@ if __name__ == '__main__':
     args_parser.add_argument('-a', '--agents_prefix',
                              help='Every agent whose name starts with the given prefix will be tested',
                              required=True)
-
-    # RandomLF-specific arguments
-    args_parser.add_argument('--noise',
-                             help='[test=randomlf] Noise quantity in range [0,1]',
-                             type=float,
-                             required=False)
 
     # Blinding attacks-specific arguments
     args_parser.add_argument('--traces_from',
