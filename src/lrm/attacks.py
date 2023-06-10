@@ -198,11 +198,13 @@ def find_edge_blinding_strategies(traces, *, target_states=False):
     # Determine unique transitions found in traces
     unique_transitions = set(itertools.chain(*transition_histories))
 
+    # Exclude transitions that do not change the RM state
+    unique_transitions = [t for t in unique_transitions if t[0] != t[2]]
+
     # Generic Edge-based attack
     if not target_states:
 
-        # Exclude transitions that do not change the RM state
-        potential_targets = [t for t in unique_transitions if t[0] != t[2]]
+        potential_targets = [t for t in unique_transitions]
 
     # State-based attack
     else:
