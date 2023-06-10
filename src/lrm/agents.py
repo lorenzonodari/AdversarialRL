@@ -5,6 +5,7 @@ import tensorflow.compat.v1 as tf
 import gymnasium as gym
 import numpy as np
 
+from environments import CookieWorldEnv, KeysWorldEnv, SymbolWorldEnv
 from environments.game import Game
 from .reward_machines.reward_machine import RewardMachine
 from .config import LRMConfig
@@ -408,6 +409,8 @@ class TrainedLRMAgent:
         load_folder = f'agents/{agent_id}'
         assert os.path.exists(load_folder), f"The specified agent ID [{agent_id}] could not be found"
 
+        self._agent_id = agent_id
+
         # Load the configuration that was used to train the agent
         config = LRMConfig(config_file=f'{load_folder}/training.conf')
 
@@ -474,6 +477,22 @@ class TrainedLRMAgent:
     def close(self):
 
         self._tf_session.close()
+
+    def get_env(self):
+        """
+        Returns an instance of the environment the agent was trained for
+
+        :return: An environment instance
+        """
+
+        if "_cw_" in self._agent_id:
+            return CookieWorldEnv()
+        elif "_kw_" in self._agent_id:
+            return KeysWorldEnv()
+        elif "_sw_" in self._agent_id:
+            return SymbolWorldEnv()
+        else:
+            raise ValueError(f'Unable to detect appropriate env from agent ID "{self._agent_id}"')
 
     def test(self, env, n_episodes, episode_horizon, *, seed=None):
         """

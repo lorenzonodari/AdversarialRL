@@ -5,8 +5,6 @@ import itertools
 from lrm.agents import TrainedLRMAgent
 from lrm.labeling import EventBlindingAttack, EdgeBlindingAttack
 
-from testing import get_env_for_agent
-
 
 def gather_traces(session_name):
     """
@@ -241,7 +239,7 @@ def rank_event_blinding_strategies(victim_id,
 
     # Load victim agent and associated environment
     victim = TrainedLRMAgent(victim_id)
-    base_env = get_env_for_agent(victim_id)
+    base_env = victim.get_env()
 
     # Pre-process the traces
     if preprocessing:
@@ -282,7 +280,7 @@ def rank_edge_blinding_strategies(victim_id,
                                   episode_length=500):
 
     victim = TrainedLRMAgent(victim_id)
-    base_env = get_env_for_agent(victim_id)
+    base_env = victim.get_env()
 
     if preprocessing:
         traces = preprocess_traces(traces)

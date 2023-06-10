@@ -11,20 +11,6 @@ from lrm.labeling import RandomLFNoise
 from environments import CookieWorldEnv, KeysWorldEnv, SymbolWorldEnv
 
 
-def get_env_for_agent(agent_id):
-
-    # TODO: Refactor directly into TrainedLRMAgent
-
-    if "_cw_" in agent_id:
-        return CookieWorldEnv()
-    elif "_kw_" in agent_id:
-        return KeysWorldEnv()
-    elif "_sw_" in agent_id:
-        return SymbolWorldEnv()
-    else:
-        raise ValueError(f'Unable to detect appropriate env from agent ID "{agent_id}"')
-
-
 def save_results(results, run_time, session_name, agent_id, *, seed=None):
 
     results_folder = f'results/test/{session_name}/{agent_id}'
@@ -56,7 +42,7 @@ def test_lf_baseline(agents, n_episodes, episode_horizon, session_name):
         agent = TrainedLRMAgent(agent_id)
 
         # Create environment instance
-        env = get_env_for_agent(agent_id)
+        env = agent.get_env()
 
         # Execute test and save results
         start = time.time()
@@ -77,7 +63,7 @@ def test_lf_random_noise(agents, n_episodes, episode_horizon, session_name, nois
         agent = TrainedLRMAgent(agent_id)
 
         # Prepare the environment + random labeling function noise
-        env = RandomLFNoise(get_env_for_agent(agent_id), noise, seed=i)
+        env = RandomLFNoise(agent.get_env(), noise, seed=i)
 
         # Execute the test and save the results
         start = time.time()
