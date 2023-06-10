@@ -7,8 +7,9 @@ import argparse
 import tensorflow as tf
 
 from lrm.agents import TrainedLRMAgent
-from lrm.labeling import RandomLFNoise
-from environments import CookieWorldEnv, KeysWorldEnv, SymbolWorldEnv
+from lrm.attacks import gather_traces, preprocess_traces
+from lrm.attacks import rank_event_blinding_strategies, rank_edge_blinding_strategies
+from lrm.labeling import RandomLFNoise, EventBlindingAttack, EdgeBlindingAttack
 
 
 def save_results(results, run_time, session_name, agent_id, *, seed=None):
@@ -32,6 +33,24 @@ def save_results(results, run_time, session_name, agent_id, *, seed=None):
     # Save obtained traces
     with open(f'{results_folder}/traces.json', 'w') as traces_file:
         json.dump(traces, traces_file)
+
+
+def save_blinding_strategies(strategies, session_name, strats_id):
+
+    strategies_folder = f'results/test/{session_name}'
+
+    if not os.path.exists(strategies_folder):
+        os.makedirs(strategies_folder)
+
+    with open(f'{strategies_folder}/{strats_id}.csv', 'w', newline='') as file:
+
+        writer = csv.writer(file)
+        writer.writerow(['Rank', 'Strategy', 'Avg.Reward', 'Avg.Steps', 'Avg.Tamperings'])
+
+        for i, (strat, scores) in enumerate(strategies):
+
+            avg_reward, avg_steps, avg_tamperings = scores
+            writer.writerow([i, str(strat), avg_reward, avg_steps, avg_tamperings])
 
 
 def test_lf_baseline(agents, n_episodes, episode_horizon, session_name):
@@ -74,10 +93,86 @@ def test_lf_random_noise(agents, n_episodes, episode_horizon, session_name, nois
         agent.close()
 
 
-def test_lf_blinding_attack(agents):
+def test_event_blinding(agents, traces_session_id, n_strategies, n_episodes, episode_horizon, session_name):
 
-    # TODO
-    pass
+    traces = gather_traces(traces_session_id)
+    traces = preprocess_traces(traces)
+
+    for i, agent_id in enumerate(agents):
+
+        # Load the victim agent
+        victim = TrainedLRMAgent(agent_id)
+
+        # Test both compound and atomic events
+        for compound_events in [True, False]:
+
+            strats_type = 'atom' if not compound_events else 'comp'
+            strats_id = f'{agent_id}_{strats_type}'
+
+            ranked_strategies = rank_event_blinding_strategies(agent_id, traces,
+                                                               use_compound_events=compound_events,
+                                                               trials_per_strategy=100,
+                                                               episode_length=500)
+
+            save_blinding_strategies(ranked_strategies, session_name, strats_id)
+
+            # Test only a given number of best strategies
+            best_strategies = ranked_strategies[:n_strategies]
+
+            for j, (strat, _) in enumerate(best_strategies):
+
+                target, appearance = strat
+
+                base_env = victim.get_env()
+                env = EventBlindingAttack(base_env, target, appearance)
+
+                start = time.time()
+                results = victim.test(env, n_episodes, episode_horizon, seed=i)
+                run_time = int(time.time() - start)
+                save_results(results, run_time, session_name, f'{strats_id}_{j}', seed=i)
+
+        victim.close()
+
+
+def test_edge_blinding(agents, traces_session_id, n_strategies, n_episodes, episode_horizon, session_name):
+
+    traces = gather_traces(traces_session_id)
+    traces = preprocess_traces(traces)
+
+    for i, agent_id in enumerate(agents):
+
+        # Load the victim agent
+        victim = TrainedLRMAgent(agent_id)
+
+        # Test both compound and atomic events
+        for state_based in [True, False]:
+
+            strats_type = 'edge' if not state_based else 'state'
+            strats_id = f'{agent_id}_{strats_type}'
+
+            ranked_strategies = rank_edge_blinding_strategies(agent_id, traces,
+                                                              target_states=state_based,
+                                                              trials_per_strategy=100,
+                                                              episode_length=500)
+
+            save_blinding_strategies(ranked_strategies, session_name, strats_id)
+
+            # Test only a given number of best strategies
+            best_strategies = ranked_strategies[:n_strategies]
+
+            for j, (strat, _) in enumerate(best_strategies):
+
+                target, appearance = strat
+
+                base_env = victim.get_env()
+                env = EdgeBlindingAttack(base_env, victim._rm, target, appearance)
+
+                start = time.time()
+                results = victim.test(env, n_episodes, episode_horizon, seed=i)
+                run_time = int(time.time() - start)
+                save_results(results, run_time, session_name, f'{strats_id}_{j}', seed=i)
+
+        victim.close()
 
 
 def test_lrm_agent(cli_args):
@@ -85,6 +180,7 @@ def test_lrm_agent(cli_args):
     # Gather the agents IDs to be tested
     agents = [agent for agent in os.listdir('agents') if agent.startswith(cli_args.agents_prefix)]
 
+    # Dispatch test execution to the proper function
     if cli_args.test == 'baseline':
 
         test_lf_baseline(agents, cli_args.n_episodes, cli_args.max_episode_length, cli_args.session)
@@ -92,6 +188,14 @@ def test_lrm_agent(cli_args):
     elif cli_args.test == 'randomlf':
 
         test_lf_random_noise(agents, cli_args.n_episodes, cli_args.max_episode_length, cli_args.session, cli_args.noise)
+
+    elif cli_args.test == 'evt-blind':
+
+        test_event_blinding(agents, cli_args.traces_from, cli_args.n_strategies, cli_args.n_episodes, cli_args.max_episode_length, cli_args.session)
+
+    elif cli_args.test == 'edg-blind':
+
+        test_edge_blinding(agents, cli_args.traces_from, cli_args.n_strategies, cli_args.n_episodes, cli_args.max_episode_length, cli_args.session)
 
     else:
 
@@ -103,7 +207,7 @@ if __name__ == '__main__':
     args_parser = argparse.ArgumentParser(description='Test pre-trained LRM agents under various conditions')
 
     args_parser.add_argument('-t', '--test',
-                             choices=['baseline', 'randomlf'],
+                             choices=['baseline', 'randomlf', 'evt-blind', 'edg-blind'],
                              help='The type of test to be run on the agents',  # See test_lrm_agent for the meanings
                              required=True)
     args_parser.add_argument('-n', '--n_episodes',
@@ -125,6 +229,15 @@ if __name__ == '__main__':
     args_parser.add_argument('--noise',
                              help='[test=randomlf] Noise quantity in range [0,1]',
                              type=float,
+                             required=False)
+
+    # Blinding attacks-specific arguments
+    args_parser.add_argument('--traces_from',
+                             help="[test=*-blind] Name of the session to be used for obtaining the traces to determine attack strategies",
+                             required=False)
+    args_parser.add_argument('--n_strategies',
+                             type=int,
+                             help='[test=*-blind] Number of top-rated strategies to be used for actual agent testing',
                              required=False)
 
     args = args_parser.parse_args()
