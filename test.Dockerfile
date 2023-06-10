@@ -15,7 +15,5 @@ RUN pip install protobuf==3.20
 COPY --chown=ray:users . /code
 WORKDIR /code
 
-COPY --chown=ray:users ./agents /code/agents
-
 # Execute testing script
 CMD bash scripts/test_agents.sh
