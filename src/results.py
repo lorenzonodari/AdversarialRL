@@ -95,7 +95,7 @@ def training_session_results(sessions: Union[list, str]) -> None:
         all_times = []
         steps = None
 
-        session_folder = f'results/{session}'
+        session_folder = f'results/train/{session}'
         for run_folder in [f for f in os.listdir(session_folder) if f.startswith("seed_")]:
 
             rewards, current_steps, exec_time = process_training_results(session_folder, run_folder)
