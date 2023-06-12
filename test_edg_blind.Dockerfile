@@ -21,4 +21,4 @@ COPY --chown=ray:users ./results/test /code/results/test
 WORKDIR /code
 
 # Execute testing script
-CMD python src/testing.py -t edg-blind -n 1000 -m 500 -a perfect_${TESTING_ENV} -s test_${TESTING_ENV}_edg-blind --n_strategies 5 --traces-from test_${TESTING_ENV}_baseline
+CMD python src/testing.py -t edg-blind -n 1000 -m 500 -a perfect_${TESTING_ENV} -s test_${TESTING_ENV}_edg-blind --n_strategies 5 --traces_from test_${TESTING_ENV}_baseline
