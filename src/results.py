@@ -133,7 +133,7 @@ def process_test_results(session_folder, agent_id):
         _ = next(reader)
 
         # Get info
-        n_episodes, episode_horizon, tot_reward, tot_steps, _, _ = next(reader)
+        n_episodes, episode_horizon, tot_reward, tot_steps, _, _, _ = next(reader)
 
     # Convert to proper data types
     n_episodes = int(n_episodes)
