@@ -12,7 +12,7 @@ from lrm.attacks import rank_event_blinding_strategies, rank_edge_blinding_strat
 from lrm.labeling import RandomLFNoise, EventBlindingAttack, EdgeBlindingAttack
 
 
-def save_results(results, run_time, session_name, agent_id, *, seed=None):
+def save_results(results, run_time, n_tamperings, session_name, agent_id, *, seed=None):
 
     results_folder = f'results/test/{session_name}/{agent_id}'
 
@@ -26,8 +26,8 @@ def save_results(results, run_time, session_name, agent_id, *, seed=None):
     with open(f'{results_folder}/results.csv', 'w', newline='') as results_file:
         writer = csv.writer(results_file)
         writer.writerows([
-            ['Episodes', 'Ep. Horizon', 'Total Reward', 'Total Steps', 'Runtime (s)', 'Seed'],
-            [n_episodes, episode_horizon, total_reward, total_steps, run_time, seed]
+            ['Episodes', 'Ep. Horizon', 'Total Reward', 'Total Steps', 'Total tamperings', 'Runtime (s)', 'Seed'],
+            [n_episodes, episode_horizon, total_reward, total_steps, n_tamperings, run_time, seed]
         ])
 
     # Save obtained traces
@@ -67,7 +67,7 @@ def test_lf_baseline(agents, n_episodes, episode_horizon, session_name):
         start = time.time()
         results = agent.test(env, n_episodes, episode_horizon, seed=i)
         run_time = int(time.time() - start)
-        save_results(results, run_time, session_name, agent_id, seed=i)
+        save_results(results, run_time, 0, session_name, agent_id, seed=i)
 
         agent.close()
 
@@ -88,7 +88,8 @@ def test_lf_random_noise(agents, n_episodes, episode_horizon, session_name):
             start = time.time()
             results = agent.test(env, n_episodes, episode_horizon, seed=i)
             run_time = int(time.time() - start)
-            save_results(results, run_time, session_name, f'{agent_id}_noise_{int(noise * 100)}', seed=i)
+            n_tamperings = env.n_tamperings
+            save_results(results, run_time, n_tamperings, session_name, f'{agent_id}_noise_{int(noise * 100)}', seed=i)
 
         agent.close()
 
@@ -129,7 +130,8 @@ def test_event_blinding(agents, traces_session_id, n_strategies, n_episodes, epi
                 start = time.time()
                 results = victim.test(env, n_episodes, episode_horizon, seed=i)
                 run_time = int(time.time() - start)
-                save_results(results, run_time, session_name, f'{strats_id}_{j}', seed=i)
+                n_tamperings = env.n_tamperings
+                save_results(results, run_time, n_tamperings, session_name, f'{strats_id}_{j}', seed=i)
 
         victim.close()
 
@@ -170,7 +172,8 @@ def test_edge_blinding(agents, traces_session_id, n_strategies, n_episodes, epis
                 start = time.time()
                 results = victim.test(env, n_episodes, episode_horizon, seed=i)
                 run_time = int(time.time() - start)
-                save_results(results, run_time, session_name, f'{strats_id}_{j}', seed=i)
+                n_tamperings = env.n_tamperings
+                save_results(results, run_time, n_tamperings, session_name, f'{strats_id}_{j}', seed=i)
 
         victim.close()
 
