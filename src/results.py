@@ -79,9 +79,10 @@ def training_session_results(sessions: Union[list, str]) -> None:
     """
     Process the results for every training execution in the given session(s).
 
-    For each run, this function produces:
+    This function produces:
 
     - a plot of obtained reward during a random episode vs number of training steps;
+    - a summary plot of reward vs number of training steps obtained by averaging every run in the session;
 
     :param sessions: The name of a training session, or a list of them, for which to process results
     """
@@ -122,3 +123,59 @@ def training_session_results(sessions: Union[list, str]) -> None:
         plt.savefig(f'{session_folder}/summary_plot.png')
         plt.close()
 
+
+def baseline_test_results(sessions: Union[list, str]) -> None:
+
+    if isinstance(sessions, str):
+        sessions = [sessions]
+
+    for session in sessions:
+
+        all_rewards, all_avg_success_steps = [], []
+        session_episodes, session_horizon = None, None
+
+        session_folder = f'results/test/{session}'
+
+        for agent_id in [f.name for f in os.scandir(session_folder) if f.is_dir()]:
+
+            with open(f'{session_folder}/{agent_id}/results.csv', newline='') as results_file:
+
+                reader = csv.reader(results_file)
+
+                # Discard header
+                _ = next(reader)
+
+                # Get info
+                n_episodes, episode_horizon, tot_reward, tot_steps, _, _ = next(reader)
+
+            # Convert to proper data types
+            n_episodes = int(n_episodes)
+            episode_horizon = int(episode_horizon)
+            tot_reward = int(tot_reward)
+            tot_steps = int(tot_steps)
+
+            # Make sure all runs share the same parameters
+            if session_episodes is None:
+                session_episodes, session_horizon = n_episodes, episode_horizon
+            else:
+                assert n_episodes == session_episodes and episode_horizon == session_horizon
+
+            # Derive additional data
+            n_success = tot_reward
+            n_failures = n_episodes - n_success
+            steps_when_success = tot_steps - (episode_horizon * n_failures)
+
+            # Add results to summary array
+            all_rewards.append(tot_reward)
+            all_avg_success_steps.append(steps_when_success / n_success)
+
+        avg_reward = np.mean(all_rewards) / session_episodes
+        avg_steps = np.mean(all_avg_success_steps)
+
+        with open(f'{session_folder}/summary.csv', 'w', newline='') as summary_file:
+
+            writer = csv.writer(summary_file)
+            writer.writerows([
+                ['Avg. Episodic Reward', 'Avg. Steps to Success'],
+                [avg_reward, avg_steps]
+            ])
