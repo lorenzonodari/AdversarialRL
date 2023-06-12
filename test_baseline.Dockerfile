@@ -12,8 +12,12 @@ ENV TESTING_ENV=${env}
 RUN pip install protobuf==3.20
 
 # Copy code and cd into directory
-COPY --chown=ray:users . /code
+COPY --chown=ray:users ./config /code/config
+COPY --chown=ray:users ./maps /code/maps
+COPY --chown=ray:users ./src /code/src
+COPY --chown=ray:users ./agents /code/agents
+
 WORKDIR /code
 
 # Execute testing script
-CMD bash scripts/test_agents.sh
+CMD python src/testing.py -t baseline -n 1000 -m 500 -a perfect_${TESTING_ENV} -s test_${TESTING_ENV}_baseline

@@ -2,17 +2,11 @@
 FROM rayproject/ray-ml:2.3.0-py310-gpu
 
 # Build-time arguments
-ARG n_runs
-ARG session_name
-ARG scenario
-ARG config
+ARG env
 
 # Propagate build-time arguments to environment variables to make sure that the container
 # can access their value at runtime.
-ENV TRAINING_N_RUNS=${n_runs}
-ENV TRAINING_SESSION_NAME=${session_name}
-ENV TRAINING_SCENARIO=${scenario}
-ENV TRAINING_CONFIG=${config}
+ENV TESTING_ENV=${env}
 
 # Make sure protobuf <= 3.20
 RUN pip install protobuf==3.20
@@ -21,8 +15,10 @@ RUN pip install protobuf==3.20
 COPY --chown=ray:users ./config /code/config
 COPY --chown=ray:users ./maps /code/maps
 COPY --chown=ray:users ./src /code/src
+COPY --chown=ray:users ./agents/ /code/agents
+COPY --chown=ray:users ./results/test /code/results/test
 
 WORKDIR /code
 
-# Execute interactive shell
-CMD python src/training.py -e ${TRAINING_SCENARIO} -n ${TRAINING_N_RUNS} -c config/${TRAINING_CONFIG} -s ${TRAINING_SESSION_NAME}
+# Execute testing script
+CMD python src/testing.py -t edg-blind -n 1000 -m 500 -a perfect_${TESTING_ENV} -s test_${TESTING_ENV}_edg-blind --n_strategies 5 --traces-from test_${TESTING_ENV}_baseline
