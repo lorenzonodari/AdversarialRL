@@ -217,7 +217,7 @@ class RandomLFNoise(LabelTampering):
 
     def _tamper_events(self, events):
 
-        if self._random.random() > self._noise_quantity:
+        if self._random.random() < self._noise_quantity:
 
             # Chose a random position in the event string to tamper
             target_index = self._random.randint(0, len(events) - 1)
