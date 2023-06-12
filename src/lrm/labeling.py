@@ -203,7 +203,7 @@ class LabelTampering(gym.Wrapper):
 
 class RandomLFNoise(LabelTampering):
     """
-    Labeling function tamperer that randomly alters each event in the abstract observation with a given probability
+    Labeling function tamperer that randomly alters abstract observation with a given probability
     """
 
     def __init__(self, env, noise_quantity, *, seed=None):
@@ -217,23 +217,28 @@ class RandomLFNoise(LabelTampering):
 
     def _tamper_events(self, events):
 
-        tampered_events = ""
+        if self._random.random() > self._noise_quantity:
 
-        for e in events:
+            # Chose a random position in the event string to tamper
+            target_index = self._random.randint(0, len(events) - 1)
 
-            if self._random.random() > self._noise_quantity:
+            # Chose a random substitute event
+            substitute = self._random.choice(self._all_events)
 
-                substitute_event = e
-                while substitute_event == e:
-                    substitute_event = self._random.choice(self._all_events)
+            # If the chosen substitute is already present in the true event string, simply remove the original one
+            events_list = list(events)
+            if substitute in events:
+                del events_list[target_index]
 
-                assert substitute_event != e, "This should not be happening"
-                tampered_events += substitute_event
-
+            # If not, carry out the substitution
             else:
-                tampered_events += e
+                events_list[target_index] = substitute
 
-        return tampered_events
+            return "".join(events_list)
+
+        else:
+
+            return events
 
 
 class EventBlindingAttack(LabelTampering):
