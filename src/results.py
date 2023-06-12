@@ -33,16 +33,16 @@ def format_execution_time(exec_seconds):
     return f'{exec_days} d, {remaining_hours} h'
 
 
-def process_training_results(session, execution):
+def process_training_results(session_folder, execution):
     """
     Process the results obtained from a single training execution.
 
-    :param session: The name of the session for this execution
+    :param session_folder: The folder containing the results of the session for this execution
     :param execution: The id of the given execution e.g: seed_42
     :return rewards, steps, runtime = list of obtained rewards, list of step number for each test, execution time in seconds
     """
 
-    results_folder = os.path.join(session, execution)
+    results_folder = os.path.join(session_folder, execution)
 
     # Read execution time
     with open(f'{results_folder}/execution_time.txt') as exec_time_file:
@@ -62,7 +62,7 @@ def process_training_results(session, execution):
 
     plt.figure()
     seed = int(execution.strip('seed_'))
-    plt.suptitle(f'[Session: {session} - Seed: {seed}]')
+    plt.suptitle(f'[Session: {session_folder} - Seed: {seed}]')
     plt.title(f'Execution time: {exec_time_str}')
     plt.plot(steps, rewards)
     plt.ylabel('Reward')
@@ -124,6 +124,32 @@ def training_session_results(sessions: Union[list, str]) -> None:
         plt.close()
 
 
+def process_test_results(session_folder, agent_id):
+
+    with open(f'{session_folder}/{agent_id}/results.csv', newline='') as results_file:
+        reader = csv.reader(results_file)
+
+        # Discard header
+        _ = next(reader)
+
+        # Get info
+        n_episodes, episode_horizon, tot_reward, tot_steps, _, _ = next(reader)
+
+    # Convert to proper data types
+    n_episodes = int(n_episodes)
+    episode_horizon = int(episode_horizon)
+    tot_reward = int(tot_reward)
+    tot_steps = int(tot_steps)
+
+    # Derive additional data
+    n_success = tot_reward
+    n_failures = n_episodes - n_success
+    steps_when_success = tot_steps - (episode_horizon * n_failures)
+    avg_success_steps = steps_when_success / n_success
+
+    return n_episodes, episode_horizon, tot_reward, avg_success_steps
+
+
 def baseline_test_results(sessions: Union[list, str]) -> None:
 
     if isinstance(sessions, str):
@@ -138,21 +164,7 @@ def baseline_test_results(sessions: Union[list, str]) -> None:
 
         for agent_id in [f.name for f in os.scandir(session_folder) if f.is_dir()]:
 
-            with open(f'{session_folder}/{agent_id}/results.csv', newline='') as results_file:
-
-                reader = csv.reader(results_file)
-
-                # Discard header
-                _ = next(reader)
-
-                # Get info
-                n_episodes, episode_horizon, tot_reward, tot_steps, _, _ = next(reader)
-
-            # Convert to proper data types
-            n_episodes = int(n_episodes)
-            episode_horizon = int(episode_horizon)
-            tot_reward = int(tot_reward)
-            tot_steps = int(tot_steps)
+            n_episodes, episode_horizon, tot_reward, avg_success_steps = process_test_results(session_folder, agent_id)
 
             # Make sure all runs share the same parameters
             if session_episodes is None:
@@ -160,14 +172,9 @@ def baseline_test_results(sessions: Union[list, str]) -> None:
             else:
                 assert n_episodes == session_episodes and episode_horizon == session_horizon
 
-            # Derive additional data
-            n_success = tot_reward
-            n_failures = n_episodes - n_success
-            steps_when_success = tot_steps - (episode_horizon * n_failures)
-
             # Add results to summary array
             all_rewards.append(tot_reward)
-            all_avg_success_steps.append(steps_when_success / n_success)
+            all_avg_success_steps.append(avg_success_steps)
 
         avg_reward = np.mean(all_rewards) / session_episodes
         avg_steps = np.mean(all_avg_success_steps)
@@ -176,6 +183,6 @@ def baseline_test_results(sessions: Union[list, str]) -> None:
 
             writer = csv.writer(summary_file)
             writer.writerows([
-                ['Avg. Episodic Reward', 'Avg. Steps to Success'],
+                ['Avg. Success Rate', 'Avg. Steps to Success'],
                 [avg_reward, avg_steps]
             ])
