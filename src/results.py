@@ -437,3 +437,10 @@ def blinding_test_results(sessions):
                 for rank in range(max_tested_rank):
                     writer.writerow([rank, agents_per_rank[rank], *averages_per_rank[rank]])
 
+
+if __name__ == '__main__':
+
+    baseline_test_results(['test_cw_baseline', 'test_sw_baseline'])
+    randomlf_test_results(['test_cw_randomlf', 'test_sw_randomlf'])
+    blinding_test_results(['test_cw_evt-blind', 'test_sw_evt-blind'])
+    blinding_test_results(['test_cw_edg-blind', 'test_sw_edg-blind'])
