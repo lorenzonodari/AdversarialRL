@@ -265,6 +265,7 @@ def randomlf_test_results(sessions: Union[list, str]) -> None:
 
     for session in sessions:
 
+        session_episodes, session_horizon = None, None
         session_folder = f'results/test/{session}'
         noise_levels = [1, 5, 10, 20, 30, 40, 50]
         averages_per_noise = {lvl: None for lvl in noise_levels}
@@ -272,7 +273,6 @@ def randomlf_test_results(sessions: Union[list, str]) -> None:
         for noise in noise_levels:
 
             agents = [f.name for f in os.scandir(session_folder) if f.is_dir() and f.name.endswith(f'_noise_{noise}')]
-            session_episodes, session_horizon = None, None
 
             all_agent_results = []
             for agent_id in agents:
@@ -309,4 +309,131 @@ def randomlf_test_results(sessions: Union[list, str]) -> None:
             writer.writerow(header)
 
             for lvl in noise_levels:
-                writer.writerow([lvl] + list(averages_per_noise[lvl]))
+                writer.writerow([lvl, *averages_per_noise[lvl]])
+
+
+def summarize_strategies_benchmarks(session_folder):
+
+    strategies_files = [f for f in os.listdir(session_folder) if f.endswith('.csv') and not f.endswith('_summary.csv')]
+
+    strategies_summary = {}
+    for strategy_filename in strategies_files:
+
+        strategies_type = strategy_filename.rsplit('_', 1)[1].split('.')[0]
+
+        with open(f'{session_folder}/{strategy_filename}', newline='') as file:
+
+            reader = csv.reader(file)
+
+            _ = next(reader)  # Discard header
+
+            for rank, strat, _, _, _ in reader:
+
+                try:
+                    strategies_summary[(strategies_type, int(rank), strat)] += 1
+                except KeyError:
+                    strategies_summary[(strategies_type, int(rank), strat)] = 1
+
+    with open(f'{session_folder}/strategies_summary.csv', 'w', newline='') as out_file:
+
+        writer = csv.writer(out_file)
+
+        header = [
+            'Type',
+            'Rank',
+            'Frequency',
+            'Strategy'
+        ]
+
+        writer.writerow(header)
+
+        observed_types = set([t for t, _, _ in strategies_summary])
+        per_type_summaries = {t: [] for t in observed_types}
+        for strategy_type in sorted(observed_types):
+
+            strats = [(rank, count, strat) for (t, rank, strat), count in strategies_summary.items() if t == strategy_type]
+
+            # Sort on rank (primary key), then count (secondary key)
+            strats = sorted(strats, key=lambda x: x[1], reverse=True)
+            strats = sorted(strats, key=lambda x: x[0])
+
+            per_type_summaries[strategy_type] = strats
+
+            for s in strats:
+                writer.writerow([strategy_type, *s])
+
+    return per_type_summaries
+
+
+def blinding_test_results(sessions):
+
+    if isinstance(sessions, str):
+        sessions = [sessions]
+
+    for session in sessions:
+
+        session_episodes, session_horizon = None, None
+        session_folder = f'results/test/{session}'
+
+        per_type_summaries = summarize_strategies_benchmarks(session_folder)
+
+        observed_types = per_type_summaries.keys()
+        for strat_type in observed_types:
+
+            max_rank = max([r for r, _, _ in per_type_summaries[strat_type]])
+            max_tested_rank = max_rank
+            averages_per_rank = {rank: None for rank in range(max_rank)}
+            agents_per_rank = {i: 0 for i in range(max_rank)}
+
+            for rank in range(max_rank):
+
+                all_agent_results = []
+
+                strat_suffix = f'_{strat_type}_{rank}'
+                agents = [f.name for f in os.scandir(session_folder) if f.is_dir() and f.name.endswith(strat_suffix)]
+                n_agents = len(agents)
+
+                # The previous rank was the last one were we tested at least one agent, no point in going further
+                if n_agents == 0:
+                    max_tested_rank = rank
+                    averages_per_rank = {rank: averages_per_rank[rank] for rank in range(max_tested_rank)}
+                    agents_per_rank = {rank: agents_per_rank[rank] for rank in range(max_tested_rank)}
+                    break
+
+                for agent_id in agents:
+
+                    agent_results = process_test_results(session_folder, agent_id)
+
+                    n_episodes, episode_horizon = agent_results[0:2]
+
+                    # Make sure all runs share the same parameters
+                    if session_episodes is None:
+                        session_episodes, session_horizon = n_episodes, episode_horizon
+                    else:
+                        assert n_episodes == session_episodes and episode_horizon == session_horizon
+
+                    all_agent_results.append(agent_results)
+
+                averages_per_rank[rank] = average_agent_episodic_metrics(all_agent_results)
+                agents_per_rank[rank] = n_agents
+
+            with open(f'{session_folder}/{strat_type}_summary.csv', 'w', newline='') as summary_file:
+
+                writer = csv.writer(summary_file)
+
+                header = [
+                    'Strategy Rank',
+                    'Number of agents',
+                    'Avg. Tampering Rate',
+                    'Avg. Success Rate',
+                    'Avg. Steps to Success',
+                    'Avg. Success Reward',
+                    'Avg. Failure Rate',
+                    'Avg. Steps to Failure',
+                    'Avg Failure Reward'
+                ]
+                writer.writerow(header)
+
+                for rank in range(max_tested_rank):
+                    writer.writerow([rank, agents_per_rank[rank], *averages_per_rank[rank]])
+
