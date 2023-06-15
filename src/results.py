@@ -176,16 +176,16 @@ def process_test_results(session_folder, agent_id):
         avg_success_steps = success_steps / n_success
         avg_success_reward = success_reward / n_success
     else:
-        avg_success_steps = 0
-        avg_success_reward = 0
+        avg_success_steps = None
+        avg_success_reward = None
 
     avg_failure = n_failures / n_episodes
     if n_failures > 0:
         avg_failure_steps = failure_steps / n_failures
         avg_failure_reward = failure_reward / n_failures
     else:
-        avg_failure_steps = 0
-        avg_failure_reward = 0
+        avg_failure_steps = None
+        avg_failure_reward = None
 
     avg_tampering_rate = tot_tamperings / tot_steps
 
@@ -196,19 +196,36 @@ def average_agent_episodic_metrics(per_agent_results):
 
     ep_tampering_rates = [r[2] for r in per_agent_results]
     ep_success_rates = [r[3] for r in per_agent_results]
-    ep_success_steps = [r[4] for r in per_agent_results]
-    ep_success_rewards = [r[5] for r in per_agent_results]
     ep_failure_rates = [r[6] for r in per_agent_results]
-    ep_failure_steps = [r[7] for r in per_agent_results]
-    ep_failure_rewards = [r[8] for r in per_agent_results]
+
+    ep_success_steps = [r[4] for r in per_agent_results if r[4] is not None]
+    ep_success_rewards = [r[5] for r in per_agent_results if r[5] is not None]
+    ep_failure_steps = [r[7] for r in per_agent_results if r[7] is not None]
+    ep_failure_rewards = [r[8] for r in per_agent_results if r[8] is not None]
 
     avg_tampering_rate = np.mean(ep_tampering_rates)
     avg_success_rate = np.mean(ep_success_rates)
-    avg_success_steps = np.mean(ep_success_steps)
-    avg_success_rewards = np.mean(ep_success_rewards)
     avg_failure_rate = np.mean(ep_failure_rates)
-    avg_failure_steps = np.mean(ep_failure_steps)
-    avg_failure_rewards = np.mean(ep_failure_rewards)
+
+    if len(ep_success_steps) == 0:
+        avg_success_steps = None
+    else:
+        avg_success_steps = np.mean(ep_success_steps)
+
+    if len(ep_success_rewards) == 0:
+        avg_success_rewards = None
+    else:
+        avg_success_rewards = np.mean(ep_success_rewards)
+
+    if len(ep_failure_steps) == 0:
+        avg_failure_steps = None
+    else:
+        avg_failure_steps = np.mean(ep_failure_steps)
+
+    if len(ep_failure_rewards) == 0:
+        avg_failure_rewards = None
+    else:
+        avg_failure_rewards = np.mean(ep_failure_rewards)
 
     return avg_tampering_rate, avg_success_rate, avg_success_steps, avg_success_rewards, avg_failure_rate, avg_failure_steps, avg_failure_rewards
 
