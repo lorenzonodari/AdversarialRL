@@ -459,5 +459,6 @@ if __name__ == '__main__':
 
     baseline_test_results(['test_cw_baseline', 'test_sw_baseline'])
     randomlf_test_results(['test_cw_randomlf', 'test_sw_randomlf'])
+    randomlf_test_results(['test_cw_rand-blind', 'test_sw_rand-blind'])
     blinding_test_results(['test_cw_evt-blind', 'test_sw_evt-blind'])
     blinding_test_results(['test_cw_edg-blind', 'test_sw_edg-blind'])

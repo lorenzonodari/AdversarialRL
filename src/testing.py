@@ -9,7 +9,7 @@ import tensorflow as tf
 from lrm.agents import TrainedLRMAgent
 from lrm.attacks import gather_traces, preprocess_traces
 from lrm.attacks import rank_event_blinding_strategies, rank_edge_blinding_strategies
-from lrm.labeling import RandomLFNoise, EventBlindingAttack, EdgeBlindingAttack
+from lrm.labeling import RandomLFNoise, RandomBlinding, EventBlindingAttack, EdgeBlindingAttack
 
 
 def save_results(results, run_time, n_tamperings, session_name, agent_id, *, seed=None):
@@ -83,6 +83,28 @@ def test_lf_random_noise(agents, n_episodes, episode_horizon, session_name):
 
             # Prepare the environment + random labeling function noise
             env = RandomLFNoise(agent.get_env(), noise, seed=i)
+
+            # Execute the test and save the results
+            start = time.time()
+            results = agent.test(env, n_episodes, episode_horizon, seed=i)
+            run_time = int(time.time() - start)
+            n_tamperings = env.n_tamperings
+            save_results(results, run_time, n_tamperings, session_name, f'{agent_id}_noise_{int(noise * 100)}', seed=i)
+
+        agent.close()
+
+
+def test_random_blinding(agents, n_episodes, episode_horizon, session_name):
+
+    for i, agent_id in enumerate(agents):
+
+        # Load the agent
+        agent = TrainedLRMAgent(agent_id)
+
+        for noise in [0.01, 0.05, 0.10, 0.20, 0.30, 0.40, 0.50]:
+
+            # Prepare the environment + random labeling function noise
+            env = RandomBlinding(agent.get_env(), noise, seed=i)
 
             # Execute the test and save the results
             start = time.time()
@@ -192,6 +214,10 @@ def test_lrm_agent(cli_args):
 
         test_lf_random_noise(agents, cli_args.n_episodes, cli_args.max_episode_length, cli_args.session)
 
+    elif cli_args.test == 'rand-blind':
+
+        test_random_blinding(agents, cli_args.n_episodes, cli_args.max_episode_length, cli_args.session)
+
     elif cli_args.test == 'evt-blind':
 
         test_event_blinding(agents, cli_args.traces_from, cli_args.n_strategies, cli_args.n_episodes, cli_args.max_episode_length, cli_args.session)
@@ -210,7 +236,7 @@ if __name__ == '__main__':
     args_parser = argparse.ArgumentParser(description='Test pre-trained LRM agents under various conditions')
 
     args_parser.add_argument('-t', '--test',
-                             choices=['baseline', 'randomlf', 'evt-blind', 'edg-blind'],
+                             choices=['baseline', 'randomlf', 'rand-blind', 'evt-blind', 'edg-blind'],
                              help='The type of test to be run on the agents',  # See test_lrm_agent for the meanings
                              required=True)
     args_parser.add_argument('-n', '--n_episodes',
@@ -230,11 +256,11 @@ if __name__ == '__main__':
 
     # Blinding attacks-specific arguments
     args_parser.add_argument('--traces_from',
-                             help="[test=*-blind] Name of the session to be used for obtaining the traces to determine attack strategies",
+                             help="[test=<evt,edg>-blind] Name of the session to be used for obtaining the traces to determine attack strategies",
                              required=False)
     args_parser.add_argument('--n_strategies',
                              type=int,
-                             help='[test=*-blind] Number of top-rated strategies to be used for actual agent testing',
+                             help='[test=<evt,edg>-blind] Number of top-rated strategies to be used for actual agent testing',
                              required=False)
 
     args = args_parser.parse_args()

@@ -203,7 +203,13 @@ class LabelTampering(gym.Wrapper):
 
 class RandomLFNoise(LabelTampering):
     """
-    Labeling function tamperer that randomly alters abstract observation with a given probability
+    Labeling function tamperer that randomly alters abstract observation with a given probability.
+
+    This tamperer adopts the following noise model:
+
+     - every labelling function output might be subject to noise;
+     - every labelling function output tampering might consist of the removal (blinding) or substitution of any event
+       in the original event string
     """
 
     def __init__(self, env, noise_quantity, *, seed=None):
@@ -235,6 +241,38 @@ class RandomLFNoise(LabelTampering):
                 events_list[target_index] = substitute
 
             return "".join(events_list)
+
+        else:
+
+            return events
+
+
+class RandomBlinding(LabelTampering):
+
+    def __init__(self, env, noise_quantity, *, seed=None):
+
+        super().__init__(env)
+
+        assert 0.0 < noise_quantity < 1.0, "Noise quantity must be in range [0, 1]"
+        self._noise_quantity = noise_quantity
+        self._seed = seed
+        self._random = random.Random(self._seed)
+
+    def _tamper_events(self, events):
+
+        # Determine if this labelling function output will be tampered
+        if self._random.random() < self._noise_quantity:
+
+            # Chose a random position in the event string to tamper
+            target_index = self._random.randint(0, len(events))
+
+            # Remove the event string as a whole (compound tampering)
+            if target_index == len(events):
+                return ""
+            # Remove the event at the specified index
+            else:
+                tampered_events = events[:target_index] + events[target_index + 1:]
+                return tampered_events
 
         else:
 
