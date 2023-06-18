@@ -329,6 +329,74 @@ def randomlf_test_results(sessions: Union[list, str]) -> None:
                 writer.writerow([lvl, *averages_per_noise[lvl]])
 
 
+def simple_blinding_test_results(sessions):
+
+    if isinstance(sessions, str):
+        sessions = [sessions]
+
+    strategy_types = ["all", "first", "trigger_30", "trigger_40", "trigger_50"]
+
+    for session in sessions:
+
+        session_episodes, session_horizon = None, None
+        session_folder = f'results/test/{session}'
+
+        if 'evt-blind' in session:
+            attack_types = ['atom', 'comp']
+        elif 'edg-blind' in session:
+            attack_types = ['edge', 'state']
+        else:
+            assert False, 'Non-standard session name: are you sure you are processing the right session?'
+
+        averages_per_type = {}
+
+        for attack_type in attack_types:
+
+            averages_per_type[attack_type] = {t: None for t in strategy_types}
+
+            for strat_type in strategy_types:
+
+                agents = [f.name for f in os.scandir(session_folder) if f.is_dir() and f.name.endswith(f'{attack_type}_{strat_type}')]
+                all_agent_results = []
+                for agent_id in agents:
+
+                    agent_results = process_test_results(session_folder, agent_id)
+
+                    n_episodes, episode_horizon = agent_results[0:2]
+
+                    # Make sure all runs share the same parameters
+                    if session_episodes is None:
+                        session_episodes, session_horizon = n_episodes, episode_horizon
+                    else:
+                        assert n_episodes == session_episodes and episode_horizon == session_horizon
+
+                    all_agent_results.append(agent_results)
+
+                averages_per_type[attack_type][strat_type] = average_agent_episodic_metrics(all_agent_results)
+
+        # Write a summary CSV file
+        with open(f'{session_folder}/summary.csv', 'w', newline='') as summary_file:
+
+            writer = csv.writer(summary_file)
+
+            header = [
+                'Attack Type',
+                'Strategy Type',
+                'Avg. Tampering Rate',
+                'Avg. Success Rate',
+                'Avg. Steps to Success',
+                'Avg. Success Reward',
+                'Avg. Failure Rate',
+                'Avg. Steps to Failure',
+                'Avg Failure Reward'
+            ]
+            writer.writerow(header)
+
+            for attack_type in averages_per_type.keys():
+                for strat_type in strategy_types:
+                    writer.writerow([attack_type, strat_type, *averages_per_type[attack_type][strat_type]])
+
+
 def summarize_strategies_benchmarks(session_folder):
 
     strategies_files = [f for f in os.listdir(session_folder) if f.endswith('.csv') and not f.endswith('_summary.csv')]
@@ -382,7 +450,7 @@ def summarize_strategies_benchmarks(session_folder):
     return per_type_summaries
 
 
-def blinding_test_results(sessions):
+def ranked_blinding_test_results(sessions):
 
     if isinstance(sessions, str):
         sessions = [sessions]
@@ -460,5 +528,5 @@ if __name__ == '__main__':
     baseline_test_results(['test_cw_baseline', 'test_sw_baseline'])
     randomlf_test_results(['test_cw_randomlf', 'test_sw_randomlf'])
     randomlf_test_results(['test_cw_rand-blind', 'test_sw_rand-blind'])
-    blinding_test_results(['test_cw_evt-blind', 'test_sw_evt-blind'])
-    blinding_test_results(['test_cw_edg-blind', 'test_sw_edg-blind'])
+    simple_blinding_test_results(['test_cw_evt-blind', 'test_sw_evt-blind'])
+    simple_blinding_test_results(['test_cw_edg-blind', 'test_sw_edg-blind'])

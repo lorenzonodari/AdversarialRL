@@ -1,4 +1,5 @@
 import os
+import math
 import json
 import itertools
 
@@ -129,12 +130,16 @@ def find_event_blinding_strategies(traces, *,
     - target_events is a subset of all possible events;
     - appearance_index is the index of the target events appearance that we are targeting
 
-    Alternatively, an appearance_index = None represent the case of a persistent Event Blinding Attack, where
+    Alternatively, an appearance_index = None represents the case of a persistent Event Blinding Attack, where
     the target string is always removed form the labelling function output.
 
+    Finally, an appearance_index = '*' represents the case of a random-trigger Event Blinding Attack.
+
+    TODO: Refactor into find_event_blinding_targets()
+
     :param traces: The traces to be used to determine potential attack options
-    :param use_compound_events: If True, also use the event strings as they appear in the traces as potential targets.
-                                If False, use only the atomic events as potential targets.
+    :param use_compound_events: If True, use the event strings as they appear in the traces as potential targets.
+                                If False, use the atomic events as potential targets.
     :return: Two list of potential attack options ie: [(target1, index1), ..., (targetn, indexn)]
     """
 
@@ -142,15 +147,39 @@ def find_event_blinding_strategies(traces, *,
     event_sequences = [[e for _, e, _ in h] for h, _ in traces]
 
     # Determine unique event strings found in the traces
-    unique_event_strings = set(itertools.chain(*event_sequences))
+    chained_event_sequences = list(itertools.chain(*event_sequences))
+    unique_event_strings = set(chained_event_sequences)
     chained_event_strings = "".join(unique_event_strings)
-    potential_targets = set(chained_event_strings)  # Get unique characters ie: events
+    unique_events = set(chained_event_strings)  # Get unique characters ie: events
 
     if use_compound_events:
-        potential_targets |= unique_event_strings
+        potential_targets = unique_event_strings
+    else:
+        potential_targets = unique_events
+
+    # Prepare target statistics dictionary
+    target_stats = {t: {"ep_freq": 0, "abs_freq": 0, "earliest_seen": math.inf} for t in potential_targets}
+    for t in potential_targets:
+
+        for sequence in event_sequences:
+
+            found = False
+            for i, evt_str in enumerate(sequence):
+
+                if t in evt_str:
+
+                    if not found:
+                        target_stats[t]["ep_freq"] += 1  # N. episodes where t is found
+                        target_stats[t]["earliest_seen"] = min(target_stats[t]["earliest_seen"], i)  # Earliest step t was found at
+                        found = True
+
+                    target_stats[t]["abs_freq"] += 1  # N. of total times t is found
 
     # First, we consider permanent strategies, where we choose to attack every occurrence of the target
     persistent_strategies = [(t, None) for t in potential_targets]
+
+    # Then, we consider random-trigger strategies
+    triggered_strategies = [(t, '*') for t in potential_targets]
 
     # Then determine observed appearance indexes for each target to determine potential
     # timed attack strategies
@@ -174,16 +203,15 @@ def find_event_blinding_strategies(traces, *,
                     consecutive = False
 
     # The previous loop might have inserted the same option multiple times
-    # Compute the frequency of each option
-    unique_options = set(timed_strategies)
-    timed_strategies = [(o, timed_strategies.count(o)) for o in unique_options]
+    unique_timed_strategies = set(timed_strategies)
 
-    # Finally, sort the options by descending frequency, then ascending appearance index
-    timed_strategies = sorted(timed_strategies, key=lambda x: x[0][1])
-    timed_strategies = sorted(timed_strategies, key=lambda x: x[1], reverse=True)
-    timed_strategies = [s for s, _ in timed_strategies]  # Discard frequency info
+    # Compute frequency info for each strategy, meaning number of times the strategy could have been applied
+    # in the traces data
+    strat_frequencies = {s: timed_strategies.count(s) for s in unique_timed_strategies}
+    strat_frequencies |= {(t, None): target_stats[t]["ep_freq"] for t in potential_targets}
+    strat_frequencies |= {(t, '*'): target_stats[t]["abs_freq"] for t in potential_targets}
 
-    return timed_strategies, persistent_strategies
+    return unique_timed_strategies, persistent_strategies, triggered_strategies, target_stats, strat_frequencies
 
 
 def find_edge_blinding_strategies(traces, *, target_states=False):
@@ -193,7 +221,8 @@ def find_edge_blinding_strategies(traces, *, target_states=False):
 
     Since our benchmark environments lead to perfect RMs that have no loops, the same transition can't happen
     more than once in every episode. For this reason, this method only finds persistent strategies.
-    TODO: Generalize to arbitraty environments -> implement timed strategies computation
+    TODO: Generalize to arbitraty environments -> implement timed and triggered strategies computation
+    TODO: Refactor into find_edge_blinding_targets()
 
     :param traces: The traces to be used to determine potential attack strategies
     :param target_states: If True, find strategies for a State Blinding Attack
@@ -221,21 +250,60 @@ def find_edge_blinding_strategies(traces, *, target_states=False):
 
         for state in target_states:
 
-            entering_transitions = [t for t in unique_transitions if t[2] == state]
+            entering_transitions = tuple([t for t in unique_transitions if t[2] == state])
             potential_targets.append(entering_transitions)
+
+    # Prepare target statistics dictionary
+    target_statistics = {t: {"ep_freq": 0, "abs_freq": 0, "earliest_seen": math.inf} for t in potential_targets}
+    for target in potential_targets:
+
+        for history in transition_histories:
+
+            found = False
+            for i, transition in enumerate(history):
+
+                if (target_states and transition in target) or transition == target:
+
+                    if not found:
+                        target_statistics[target]["ep_freq"] += 1
+                        target_statistics[target]["earliest_seen"] = min(target_statistics[target]["earliest_seen"], i)
+                        found = True
+
+                    target_statistics[target]["abs_freq"] += 1
 
     # Persistent strategies, where we attack every occurrence of the target transition
     persistent_strategies = [(t, None) for t in potential_targets]
 
-    return persistent_strategies
+    return persistent_strategies, target_statistics
 
 
-def rank_event_blinding_strategies(victim_id,
-                                   traces, *,
-                                   use_compound_events=False,
-                                   preprocessing=False,
-                                   trials_per_strategy=100,
-                                   episode_length=500):
+def simple_event_blinding_strategies(traces, *,
+                                     use_compound_events=False,
+                                     preprocessing=False):
+
+    if preprocessing:
+        traces = preprocess_traces(traces)
+
+    _, _, _, target_stats, _ = find_event_blinding_strategies(traces, use_compound_events=use_compound_events)
+
+    # Determine target that appears in the largest number of episodes
+    # Draws are resolved by using the earliest seen heuristic: prefer targets that are seen early in the episodes
+    # Eventually, further draws are solved by rare event heuristic: prefer targets that were seen less times in total
+    targets = list(target_stats.keys())
+    sorted_targets = sorted(targets, key=lambda t: target_stats[t]["abs_freq"])
+    sorted_targets = sorted(sorted_targets, key=lambda t: target_stats[t]["earliest_seen"])
+    sorted_targets = sorted(sorted_targets, key=lambda t: target_stats[t]["ep_freq"], reverse=True)
+    actual_target = sorted_targets[0]
+
+    return [(actual_target, 1), (actual_target, None), (actual_target, '*')]
+
+
+def ranked_event_blinding_strategies(victim_id,
+                                     traces, *,
+                                     use_compound_events=False,
+                                     preprocessing=False,
+                                     trials_per_strategy=100,
+                                     episode_length=500):
 
     # Load victim agent and associated environment
     victim = TrainedLRMAgent(victim_id)
@@ -246,7 +314,7 @@ def rank_event_blinding_strategies(victim_id,
         traces = preprocess_traces(traces)
 
     # Compute possible attack strategies
-    timed_strats, persistent_strats = find_event_blinding_strategies(traces, use_compound_events=use_compound_events)
+    timed_strats, persistent_strats, _, _, _ = find_event_blinding_strategies(traces, use_compound_events=use_compound_events)
     strategies = timed_strats + persistent_strats
 
     # Now test each strategy in order, to rank them
@@ -272,12 +340,33 @@ def rank_event_blinding_strategies(victim_id,
     return ranked_strategies
 
 
-def rank_edge_blinding_strategies(victim_id,
-                                  traces, *,
-                                  target_states=False,
-                                  preprocessing=False,
-                                  trials_per_strategy=100,
-                                  episode_length=500):
+def simple_edge_blinding_strategies(traces, *,
+                                    target_states=False,
+                                    preprocessing=False):
+
+    if preprocessing:
+        traces = preprocess_traces(traces)
+
+    _, target_stats = find_edge_blinding_strategies(traces, target_states=target_states)
+
+    # Determine target that appears in the largest number of episodes
+    # Draws are resolved by using the earliest seen heuristic: prefer targets that are seen early in the episodes
+    # Eventually, further draws are solved by rare event heuristic: prefer targets that were seen less times in total
+    targets = list(target_stats.keys())
+    sorted_targets = sorted(targets, key=lambda t: target_stats[t]["abs_freq"])
+    sorted_targets = sorted(sorted_targets, key=lambda t: target_stats[t]["earliest_seen"])
+    sorted_targets = sorted(sorted_targets, key=lambda t: target_stats[t]["ep_freq"], reverse=True)
+    actual_target = sorted_targets[0]
+
+    return [(actual_target, 1), (actual_target, None), (actual_target, '*')]
+
+
+def ranked_edge_blinding_strategies(victim_id,
+                                    traces, *,
+                                    target_states=False,
+                                    preprocessing=False,
+                                    trials_per_strategy=100,
+                                    episode_length=500):
 
     victim = TrainedLRMAgent(victim_id)
     base_env = victim.get_env()
@@ -287,9 +376,9 @@ def rank_edge_blinding_strategies(victim_id,
 
     # Compute potential attack strategies
     if not target_states:
-        strategies = find_edge_blinding_strategies(traces)
+        strategies, _ = find_edge_blinding_strategies(traces)
     else:
-        strategies = find_edge_blinding_strategies(traces, target_states=True)
+        strategies, _ = find_edge_blinding_strategies(traces, target_states=True)
         # Convert target transitions list to tuple to allow for dict-key usage
         strategies = [(tuple(s[0]), s[1]) for s in strategies]
 
@@ -313,9 +402,3 @@ def rank_edge_blinding_strategies(victim_id,
     victim.close()
 
     return ranked_strategies
-
-
-
-
-
-

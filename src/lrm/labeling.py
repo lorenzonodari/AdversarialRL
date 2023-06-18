@@ -294,21 +294,26 @@ class EventBlindingAttack(LabelTampering):
     NB: In order for the tampering to happen, the labelling function output must contain ALL the target events
     """
 
-    def __init__(self, env, target_events, appearance=None):
+    def __init__(self, env, target_events, appearance=None, *, trigger_chance=None, seed=None):
         """
 
         :param env: The environment to be wrapped
         :param target_events: The set of events to be tampered with
-        :param appearance: The appearance index (1-based) when the given events must be tampered with, or None.
-                           If None, the target_events will always be removed by the labeling function output
+        :param appearance: The appearance index (1-based) when the given events must be tampered with, or None, or '*'.
+                           If None, the target_events will always be removed by the labeling function output.
+                           If '*', any occurrence may be attacked with a random probability
         """
 
         super().__init__(env)
 
-        assert appearance is None or appearance > 0, 'Appearance index must be at least 1, or None'
+        assert appearance in [None, '*'] or appearance > 0, 'Appearance index must be at least 1, or None'
+        assert trigger_chance is None or appearance == '*', 'Trigger chance can only be passed for triggered stategies ie: (_, "*")'
 
         self._target = target_events  # Subset of events we want to attack
         self._target_appearance = appearance  # Appearance index we want to tamper
+        self._trigger_chance = trigger_chance  # Probability of triggering the tampering for triggered attacks
+        self._seed = seed
+        self._random = random.Random(self._seed)
 
         # Internal state for timed attacks
         self._times_seen = 0  # Number of times we saw our target, not counting consecutive appearances
@@ -346,9 +351,11 @@ class EventBlindingAttack(LabelTampering):
             self._times_seen += 1
             self._still_present = True
 
-        # If the number of times we saw it matches the requested appearance index, we can tamper
+        # If the number of times we saw it matches the requested appearance index, we can tamper.
+        # Alternatievly, if we are using a triggered strategy, randomly chose to start the attack or not
         # Alternatively, if we already started tampering and the target is still detected, continue tampering
-        if self._target_appearance == self._times_seen or self._tampering:
+        start_attack = self._target_appearance == self._times_seen or self._random.random() < self._trigger_chance
+        if self._tampering or start_attack:
 
             self._tampering = True
             return "".join([e for e in events if e not in self._target])
@@ -394,7 +401,7 @@ class EdgeBlindingAttack(LabelTampering):
     and the persistent one, where the targets are always tampered with.
     """
 
-    def __init__(self, env, agent_rm, target_transitions, appearance=None):
+    def __init__(self, env, agent_rm, target_transitions, appearance=None, *, trigger_chance=None, seed=None):
         """
         Initialize the Edge-based Blinding Attack tamperer
 
@@ -414,13 +421,17 @@ class EdgeBlindingAttack(LabelTampering):
         if not isinstance(target_transitions[0], tuple):
             target_transitions = [target_transitions]
 
-        assert appearance is None or appearance > 0, 'Appearance index must be at least 1, or None'
+        assert appearance in [None, '*'] or appearance > 0, 'Appearance index must be at least 1, or None'
+        assert trigger_chance is None or appearance == '*', 'Trigger chance can only be passed for triggered stategies ie: (_, "*")'
 
-        self._rm = agent_rm
         self._target_transitions = target_transitions
         self._appearance = appearance
+        self._trigger_chance = trigger_chance  # Probability of triggering the tampering for triggered attacks
+        self._seed = seed
+        self._random = random.Random(self._seed)
 
         # Internal RM state
+        self._rm = agent_rm
         self._rm_state = None
 
         # Internal state for timed attacks
@@ -461,7 +472,9 @@ class EdgeBlindingAttack(LabelTampering):
                 self._times_seen += 1
 
                 # We reached the required appearance index: tamper
-                if self._times_seen == self._appearance:
+                # Alternatively, if we are using a triggered strategy, randomly vhose to start the attack or not
+                start_attack = self._times_seen == self._appearance or self._random.random() < self._trigger_chance
+                if start_attack:
 
                     # Generate the tampered labelling output
                     tampered_events = sorted_events.replace(required_events, "")

@@ -8,7 +8,8 @@ import tensorflow as tf
 
 from lrm.agents import TrainedLRMAgent
 from lrm.attacks import gather_traces, preprocess_traces
-from lrm.attacks import rank_event_blinding_strategies, rank_edge_blinding_strategies
+from lrm.attacks import simple_event_blinding_strategies, simple_edge_blinding_strategies
+from lrm.attacks import ranked_event_blinding_strategies, ranked_edge_blinding_strategies
 from lrm.labeling import RandomLFNoise, RandomBlinding, EventBlindingAttack, EdgeBlindingAttack
 
 
@@ -35,14 +36,14 @@ def save_results(results, run_time, n_tamperings, session_name, agent_id, *, see
         json.dump(traces, traces_file)
 
 
-def save_blinding_strategies(strategies, session_name, strats_id):
+def save_ranked_blinding_strategies(strategies, session_name, strats_id):
 
     strategies_folder = f'results/test/{session_name}'
 
     if not os.path.exists(strategies_folder):
         os.makedirs(strategies_folder)
 
-    with open(f'{strategies_folder}/{strats_id}.csv', 'w', newline='') as file:
+    with open(f'{strategies_folder}/{strats_id}_strategies.csv', 'w', newline='') as file:
 
         writer = csv.writer(file)
         writer.writerow(['Rank', 'Strategy', 'Avg.Reward', 'Avg.Steps', 'Avg.Tamperings'])
@@ -51,6 +52,22 @@ def save_blinding_strategies(strategies, session_name, strats_id):
 
             avg_reward, avg_steps, avg_tamperings = scores
             writer.writerow([i, str(strat), avg_reward, avg_steps, avg_tamperings])
+
+
+def save_simple_blinding_strategies(strategies, session_name, strats_id):
+
+    strategies_folder = f'results/test/{session_name}'
+
+    if not os.path.exists(strategies_folder):
+        os.makedirs(strategies_folder)
+
+    with open(f'{strategies_folder}/{strats_id}_strategies.csv', 'w', newline='') as file:
+
+        writer = csv.writer(file)
+        writer.writerow(['Strategy'])
+
+        for strat in strategies:
+            writer.writerow([str(strat)])
 
 
 def test_lf_baseline(agents, n_episodes, episode_horizon, session_name):
@@ -116,7 +133,67 @@ def test_random_blinding(agents, n_episodes, episode_horizon, session_name):
         agent.close()
 
 
-def test_event_blinding(agents, traces_session_id, n_strategies, n_episodes, episode_horizon, session_name):
+def test_simple_event_blinding(agents, traces_session_id, n_episodes, episode_horizon, session_name):
+
+    traces = gather_traces(traces_session_id)
+    traces = preprocess_traces(traces)
+
+    # Test both compound and atomic events
+    for compound_events in [True, False]:
+        
+        strats_type = 'atom' if not compound_events else 'comp'
+
+        strategies = simple_event_blinding_strategies(traces, use_compound_events=compound_events)
+        save_simple_blinding_strategies(strategies, session_name, f'simple_{strats_type}')
+
+        for i, agent_id in enumerate(agents):
+
+            victim = TrainedLRMAgent(agent_id)
+
+            timed_strat, persistent_strat, triggered_strat = strategies
+
+            # Test timed strategy
+            strats_id = f'simple_{strats_type}_first'
+
+            base_env = victim.get_env()
+            env = EventBlindingAttack(base_env, timed_strat[0], timed_strat[1])
+
+            start = time.time()
+            results = victim.test(env, n_episodes, episode_horizon, seed=i)
+            run_time = int(time.time() - start)
+            n_tamperings = env.n_tamperings
+            save_results(results, run_time, n_tamperings, session_name, f'{agent_id}_{strats_id}', seed=i)
+
+            # Test persistent strategy
+            strats_id = f'simple_{strats_type}_all'
+
+            base_env = victim.get_env()
+            env = EventBlindingAttack(base_env, persistent_strat[0], persistent_strat[1])
+
+            start = time.time()
+            results = victim.test(env, n_episodes, episode_horizon, seed=i)
+            run_time = int(time.time() - start)
+            n_tamperings = env.n_tamperings
+            save_results(results, run_time, n_tamperings, session_name, f'{agent_id}_{strats_id}', seed=i)
+
+            # Test triggered strategy with different trigger probabilities
+            for trigger_chance in [0.3, 0.4, 0.5]:
+
+                strats_id = f'simple_{strats_type}_trigger_{int(trigger_chance * 100)}'
+
+                base_env = victim.get_env()
+                env = EventBlindingAttack(base_env, triggered_strat[0], triggered_strat[1], trigger_chance=trigger_chance, seed=i)
+
+                start = time.time()
+                results = victim.test(env, n_episodes, episode_horizon, seed=i)
+                run_time = int(time.time() - start)
+                n_tamperings = env.n_tamperings
+                save_results(results, run_time, n_tamperings, session_name, f'{agent_id}_{strats_id}', seed=i)
+
+            victim.close()
+
+
+def test_ranked_event_blinding(agents, traces_session_id, n_strategies, n_episodes, episode_horizon, session_name):
 
     traces = gather_traces(traces_session_id)
     traces = preprocess_traces(traces)
@@ -132,12 +209,12 @@ def test_event_blinding(agents, traces_session_id, n_strategies, n_episodes, epi
             strats_type = 'atom' if not compound_events else 'comp'
             strats_id = f'{agent_id}_{strats_type}'
 
-            ranked_strategies = rank_event_blinding_strategies(agent_id, traces,
-                                                               use_compound_events=compound_events,
-                                                               trials_per_strategy=100,
-                                                               episode_length=500)
+            ranked_strategies = ranked_event_blinding_strategies(agent_id, traces,
+                                                                 use_compound_events=compound_events,
+                                                                 trials_per_strategy=100,
+                                                                 episode_length=500)
 
-            save_blinding_strategies(ranked_strategies, session_name, strats_id)
+            save_ranked_blinding_strategies(ranked_strategies, session_name, strats_id)
 
             # Test only a given number of best strategies
             best_strategies = ranked_strategies[:n_strategies]
@@ -158,7 +235,67 @@ def test_event_blinding(agents, traces_session_id, n_strategies, n_episodes, epi
         victim.close()
 
 
-def test_edge_blinding(agents, traces_session_id, n_strategies, n_episodes, episode_horizon, session_name):
+def test_simple_edge_blinding(agents, traces_session_id, n_episodes, episode_horizon, session_name):
+
+    traces = gather_traces(traces_session_id)
+    traces = preprocess_traces(traces)
+
+    # Test both edge-blinding and state-blinding
+    for target_states in [True, False]:
+
+        strats_type = 'edge' if not target_states else 'state'
+
+        strategies = simple_edge_blinding_strategies(traces, target_states=target_states)
+        save_simple_blinding_strategies(strategies, session_name, f'simple_{strats_type}')
+
+        for i, agent_id in enumerate(agents):
+
+            victim = TrainedLRMAgent(agent_id)
+
+            timed_strat, persistent_strat, triggered_strat = strategies
+
+            # Test timed strategy
+            strats_id = f'simple_{strats_type}_first'
+
+            base_env = victim.get_env()
+            env = EdgeBlindingAttack(base_env, victim._rm, timed_strat[0], timed_strat[1])
+
+            start = time.time()
+            results = victim.test(env, n_episodes, episode_horizon, seed=i)
+            run_time = int(time.time() - start)
+            n_tamperings = env.n_tamperings
+            save_results(results, run_time, n_tamperings, session_name, f'{agent_id}_{strats_id}', seed=i)
+
+            # Test persistent strategy
+            strats_id = f'simple_{strats_type}_all'
+
+            base_env = victim.get_env()
+            env = EdgeBlindingAttack(base_env, victim._rm, persistent_strat[0], persistent_strat[1])
+
+            start = time.time()
+            results = victim.test(env, n_episodes, episode_horizon, seed=i)
+            run_time = int(time.time() - start)
+            n_tamperings = env.n_tamperings
+            save_results(results, run_time, n_tamperings, session_name, f'{agent_id}_{strats_id}', seed=i)
+
+            # Test triggered strategy with different trigger probabilities
+            for trigger_chance in [0.3, 0.4, 0.5]:
+                strats_id = f'simple_{strats_type}_trigger_{int(trigger_chance * 100)}'
+
+                base_env = victim.get_env()
+                env = EdgeBlindingAttack(base_env, victim._rm, triggered_strat[0], triggered_strat[1],
+                                         trigger_chance=trigger_chance, seed=i)
+
+                start = time.time()
+                results = victim.test(env, n_episodes, episode_horizon, seed=i)
+                run_time = int(time.time() - start)
+                n_tamperings = env.n_tamperings
+                save_results(results, run_time, n_tamperings, session_name, f'{agent_id}_{strats_id}', seed=i)
+
+            victim.close()
+
+
+def test_ranked_edge_blinding(agents, traces_session_id, n_strategies, n_episodes, episode_horizon, session_name):
 
     traces = gather_traces(traces_session_id)
     traces = preprocess_traces(traces)
@@ -174,12 +311,12 @@ def test_edge_blinding(agents, traces_session_id, n_strategies, n_episodes, epis
             strats_type = 'edge' if not state_based else 'state'
             strats_id = f'{agent_id}_{strats_type}'
 
-            ranked_strategies = rank_edge_blinding_strategies(agent_id, traces,
-                                                              target_states=state_based,
-                                                              trials_per_strategy=100,
-                                                              episode_length=500)
+            ranked_strategies = ranked_edge_blinding_strategies(agent_id, traces,
+                                                                target_states=state_based,
+                                                                trials_per_strategy=100,
+                                                                episode_length=500)
 
-            save_blinding_strategies(ranked_strategies, session_name, strats_id)
+            save_ranked_blinding_strategies(ranked_strategies, session_name, strats_id)
 
             # Test only a given number of best strategies
             best_strategies = ranked_strategies[:n_strategies]
@@ -220,11 +357,17 @@ def test_lrm_agent(cli_args):
 
     elif cli_args.test == 'evt-blind':
 
-        test_event_blinding(agents, cli_args.traces_from, cli_args.n_strategies, cli_args.n_episodes, cli_args.max_episode_length, cli_args.session)
+        if cli_args.rank_strategies:
+            test_ranked_event_blinding(agents, cli_args.traces_from, cli_args.n_strategies, cli_args.n_episodes, cli_args.max_episode_length, cli_args.session)
+        else:
+            test_simple_event_blinding(agents, cli_args.traces_from, cli_args.n_episodes, cli_args.max_episode_length, cli_args.session)
 
     elif cli_args.test == 'edg-blind':
 
-        test_edge_blinding(agents, cli_args.traces_from, cli_args.n_strategies, cli_args.n_episodes, cli_args.max_episode_length, cli_args.session)
+        if cli_args.rank_strategies:
+            test_ranked_edge_blinding(agents, cli_args.traces_from, cli_args.n_strategies, cli_args.n_episodes, cli_args.max_episode_length, cli_args.session)
+        else:
+            test_simple_edge_blinding(agents, cli_args.traces_from, cli_args.n_episodes, cli_args.max_episode_length, cli_args.session)
 
     else:
 
@@ -260,7 +403,11 @@ if __name__ == '__main__':
                              required=False)
     args_parser.add_argument('--n_strategies',
                              type=int,
-                             help='[test=<evt,edg>-blind] Number of top-rated strategies to be used for actual agent testing',
+                             help='[test=<evt,edg>-blind and rank_strategies=True] Number of top-ranked strategies to be used for actual agent testing',
+                             required=False)
+    args_parser.add_argument('--rank_strategies',
+                             help='[test=<evt,edg>-blind] If given, use strategy-ranking variation of the test',
+                             action='store_true',
                              required=False)
 
     args = args_parser.parse_args()
