@@ -208,7 +208,7 @@ class KeysWorld(GridWorld):
 # This code allow to play a game (for debugging purposes)
 if __name__ == '__main__':
     game_type = "keysworld"
-    file_map = "../../maps/2-keys.txt"
+    file_map = "maps/2-keys.txt"
     max_time = 5000
     num_total_steps = 1000000
     num_steps = 0

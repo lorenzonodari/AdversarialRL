@@ -182,7 +182,7 @@ class SymbolWorld(GridWorld):
 # This code allow to play a game (for debugging purposes)
 if __name__ == '__main__':
     game_type = "symbolworld"
-    file_map = "../../maps/symbol.txt"
+    file_map = "maps/symbol.txt"
     max_time = 5000
     num_total_steps = 1000000
     num_steps = 0

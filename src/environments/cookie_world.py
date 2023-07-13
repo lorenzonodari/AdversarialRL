@@ -152,7 +152,7 @@ class CookieWorld(GridWorld):
 
 # This code allow to play a game (for debugging purposes)
 if __name__ == '__main__':
-    file_map = "../../maps/cookie.txt"
+    file_map = "maps/cookie.txt"
     game_type = "cookieworld"
     max_time = 5000
     num_total_steps = 1000000
