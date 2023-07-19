@@ -203,6 +203,7 @@ class KeysWorld(GridWorld):
         delta_u[(3, '2*k')]=4
         delta_u[(4, '2*')]=6
         delta_u[(5, '0*')]=6
+        delta_u[(6, 'G')]=7
         return delta_u
 
 # This code allow to play a game (for debugging purposes)

@@ -167,6 +167,8 @@ class SymbolWorld(GridWorld):
 
     def get_perfect_rm(self):
         # NOTE: This is used for debugging purposes and to compute the expected reward of an optimal policy
+        # TODO: Add final absorbing states for reward shaping
+
         delta_u = {}
         delta_u[(0, '3a.')] = 1
         delta_u[(0, '3b.')] = 2

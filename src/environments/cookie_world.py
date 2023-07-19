@@ -145,9 +145,9 @@ class CookieWorld(GridWorld):
         delta_u[(1, '2c')] = 3
         delta_u[(1, '0')]  = 3
         delta_u[(2, '3B')] = 1
-        delta_u[(2, '0C')] = 0
+        delta_u[(2, '0C')] = 4
         delta_u[(3, '3B')] = 1
-        delta_u[(3, '2C')] = 0
+        delta_u[(3, '2C')] = 4
         return delta_u
 
 # This code allow to play a game (for debugging purposes)
