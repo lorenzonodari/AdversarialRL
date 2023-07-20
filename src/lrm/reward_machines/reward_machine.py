@@ -1,3 +1,5 @@
+import gymnasium as gym
+
 from .reward_functions import *
 from .tabu_search import run_tabu_search
 
@@ -288,3 +290,42 @@ class RewardMachine:
 
         return rm
 
+
+class RewardMachineEnv(gym.Wrapper):
+    """
+    Environment wrapper to allow for keeping track of the state of a reward machine.
+
+    While, in theory, the reward machine is not a property of the agent's environment, this design
+    allows for more elasticity in the implementation of various techniques, as it allows to expose
+    the RM state trajectory to higher-level wrappers
+    """
+
+    def __init__(self, env, reward_machine):
+
+        super().__init__(env)
+        self._rm = reward_machine
+        self._rm_state = None
+
+    def step(self, action):
+
+        assert self._rm_state is not None, "Environment must be reset before step() can be called"
+
+        obs, reward, terminated, truncated, info = self.env.step(action)
+
+        self._rm_state = self._rm.get_next_state(self._rm_state, info["events"])
+        info["rm_state"] = self._rm_state
+
+        return obs, reward, terminated, truncated, info
+
+    def reset(self, *, seed=None, options=None):
+
+        obs, info = self.env.reset(seed=seed, options=options)
+
+        self._rm_state = self._rm.get_initial_state()
+        info['rm_state'] = self._rm_state
+
+        return obs, info
+
+    def close(self):
+
+        self.env.close()

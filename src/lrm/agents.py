@@ -7,7 +7,7 @@ import numpy as np
 
 from environments import CookieWorldEnv, KeysWorldEnv, SymbolWorldEnv
 from environments.game import Game
-from .reward_machines.reward_machine import RewardMachine
+from .reward_machines.reward_machine import RewardMachine, RewardMachineEnv
 from .reward_machines.reward_shaping import NullRewardShaper
 from .config import LRMConfig
 from .dqn import DQN
@@ -275,6 +275,9 @@ class LRMTrainer:
         _, info = self._rm.learn_the_reward_machine()
         rm_scores.append((step,) + info)
 
+        # Wrap environment to keep track of RM state evolution
+        env = RewardMachineEnv(env, self._rm)
+
         # Start learning a self._policy for the current rm
         finish_learning = False
         while step < self._config["train_steps"] and not finish_learning:
@@ -288,7 +291,7 @@ class LRMTrainer:
                 o1_features = np.concatenate((o1, info["event_features"]), axis=None)
 
             o1_events = info["events"]
-            u1 = self._rm.get_initial_state()
+            u1 = info["rm_state"]
             trace = [(o1_events, 0.0)]
             add_trace = False
 
@@ -314,7 +317,7 @@ class LRMTrainer:
 
                 o2_events = info["events"]
                 done = terminated or truncated
-                u2 = self._rm.get_next_state(u1, o2_events)
+                u2 = info["rm_state"]
 
                 # Reward shaping
                 reward += potential_function[u2] - potential_function[u1]
