@@ -8,6 +8,7 @@ import numpy as np
 from environments import CookieWorldEnv, KeysWorldEnv, SymbolWorldEnv
 from environments.game import Game
 from .reward_machines.reward_machine import RewardMachine
+from .reward_machines.reward_shaping import NullRewardShaper
 from .config import LRMConfig
 from .dqn import DQN
 from .qrm import QRM
@@ -190,7 +191,7 @@ class LRMTrainer:
         self._rm = None
         self._policy = None
 
-    def run_lrm(self, env: gym.Env, *, seed=None):
+    def run_lrm(self, env: gym.Env, *, reward_shaper=NullRewardShaper(), seed=None):
         """
         Implementation of the Learning Reward Machine (LRM) algorithm by Icarte et al.
 
@@ -206,6 +207,7 @@ class LRMTrainer:
         Moreover, the environment is assumed to have a Discrete action space.
 
         :param env The gymnasium.Env to be used
+        :param reward_shaper The reward shaper to be used. If not given, defaults to not using reward shaping
         :param seed The seed to be used for execution reproducibility
         :return A tuple containing the list of rewards obtained during training, the list of RM scores and final RM
         """
@@ -218,6 +220,8 @@ class LRMTrainer:
                                  seed=seed)  # TODO: Fix perfect RM
 
         self._policy = None
+
+        potential_function = reward_shaper.compute_potential_function(self._config["gamma"])
         train_rewards = []
         rm_scores = []
         reward_total = 0
@@ -311,6 +315,9 @@ class LRMTrainer:
                 o2_events = info["events"]
                 done = terminated or truncated
                 u2 = self._rm.get_next_state(u1, o2_events)
+
+                # Reward shaping
+                reward += potential_function[u2] - potential_function[u1]
 
                 # Update the number of steps and total reward
                 trace.append((o2_events, reward))
