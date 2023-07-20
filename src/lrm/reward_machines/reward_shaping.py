@@ -68,7 +68,7 @@ class NullRewardShaper:
     """
 
     def __init__(self):
-        self._potential_function = defaultdict(lambda x: 0)
+        self._potential_function = defaultdict(lambda: 0)
 
     def compute_potential_function(self, gamma):
 
