@@ -75,6 +75,10 @@ class CookieWorldEnv(gym.Env):
 
         return self._perfect_rm
 
+    def get_perfect_rewards(self):
+
+        return {(3, "2C"): 1, (2, '0C'): 1}
+
     def get_all_events(self):
 
         return self._all_events
@@ -135,6 +139,10 @@ class KeysWorldEnv(gym.Env):
 
         return self._perfect_rm
 
+    def get_perfect_rewards(self):
+
+        return {(6, "3G"): 1}
+
     def get_all_events(self):
 
         return self._all_events
@@ -194,6 +202,73 @@ class SymbolWorldEnv(gym.Env):
     def get_perfect_rm(self):
 
         return self._perfect_rm
+
+    def get_perfect_rewards(self):
+
+        return {
+            (1, '-1Abc'): 1,
+            (1, '-1aBc'): -1,
+            (1, '-1abC'): -1,
+            (1, '2Abc'): 1,
+            (1, '2aBc'): -1,
+            (1, '2abC'): -1,
+
+            (2, '-1Abc'): -1,
+            (2, '-1aBc'): 1,
+            (2, '-1abC'): -1,
+            (2, '2Abc'): -1,
+            (2, '2aBc'): 1,
+            (2, '2abC'): -1,
+
+            (3, '-1Abc'): -1,
+            (3, '-1aBc'): -1,
+            (3, '-1abC'): 1,
+            (3, '2Abc'): -1,
+            (3, '2aBc'): -1,
+            (3, '2abC'): 1,
+
+            (4, '-1Abc'): 1,
+            (4, '-1aBc'): -1,
+            (4, '-1abC'): -1,
+            (4, '2Abc'): -1,
+            (4, '2aBc'): -1,
+            (4, '2abC'): -1,
+
+            (5, '-1Abc'): -1,
+            (5, '-1aBc'): 1,
+            (5, '-1abC'): -1,
+            (5, '2Abc'): -1,
+            (5, '2aBc'): -1,
+            (5, '2abC'): -1,
+
+            (6, '-1Abc'): -1,
+            (6, '-1aBc'): -1,
+            (6, '-1abC'): 1,
+            (6, '2Abc'): -1,
+            (6, '2aBc'): -1,
+            (6, '2abC'): -1,
+
+            (7, '-1Abc'): -1,
+            (7, '-1aBc'): -1,
+            (7, '-1abC'): -1,
+            (7, '2Abc'): 1,
+            (7, '2aBc'): -1,
+            (7, '2abC'): -1,
+
+            (8, '-1Abc'): -1,
+            (8, '-1aBc'): -1,
+            (8, '-1abC'): -1,
+            (8, '2Abc'): -1,
+            (8, '2aBc'): 1,
+            (8, '2abC'): -1,
+
+            (9, '-1Abc'): -1,
+            (9, '-1aBc'): -1,
+            (9, '-1abC'): -1,
+            (9, '2Abc'): -1,
+            (9, '2aBc'): -1,
+            (9, '2abC'): 1,
+        }
 
     def get_all_events(self):
 
