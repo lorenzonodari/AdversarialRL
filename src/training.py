@@ -6,6 +6,7 @@ import multiprocessing
 
 from lrm.agents import LRMTrainer, original_lrm_implementation
 from lrm.config import LRMConfig
+from lrm.reward_machines.reward_shaping import AutomatedRewardShaper, NullRewardShaper
 from environments import CookieWorldEnv, KeysWorldEnv, SymbolWorldEnv
 from environments.game import Game, GameParams
 from environments.grid_world import GridWorldParams
@@ -68,7 +69,7 @@ def check_reimplementation(n_runs=15):
         save_results(results, run_time, 'impl_test', seed=i)
 
 
-def train_cookieworld_lrm_agent(n_runs, session_name, config_file):
+def train_cookieworld_lrm_agent(n_runs, session_name, config_file, reward_shaping):
 
     for i in range(n_runs):
 
@@ -76,13 +77,18 @@ def train_cookieworld_lrm_agent(n_runs, session_name, config_file):
 
         env = CookieWorldEnv(seed=i)
 
+        if reward_shaping:
+            reward_shaper = AutomatedRewardShaper(env.get_perfect_rm(), env.get_perfect_rewards())
+        else:
+            reward_shaper = NullRewardShaper()
+
         start = time.time()
-        results = agent.run_lrm(env, seed=i)
+        results = agent.run_lrm(env, seed=i, reward_shaper=reward_shaper)
         run_time = int(time.time() - start)
         save_results(results, run_time, session_name, seed=i)
 
 
-def train_keysworld_lrm_agent(n_runs, session_name, config_file):
+def train_keysworld_lrm_agent(n_runs, session_name, config_file, reward_shaping):
 
     for i in range(n_runs):
 
@@ -90,13 +96,18 @@ def train_keysworld_lrm_agent(n_runs, session_name, config_file):
 
         env = KeysWorldEnv(seed=i)
 
+        if reward_shaping:
+            reward_shaper = AutomatedRewardShaper(env.get_perfect_rm(), env.get_perfect_rewards())
+        else:
+            reward_shaper = NullRewardShaper()
+
         start = time.time()
-        results = agent.run_lrm(env, seed=i)
+        results = agent.run_lrm(env, seed=i, reward_shaper=reward_shaper)
         run_time = int(time.time() - start)
         save_results(results, run_time, session_name, seed=i)
 
 
-def train_symbolworld_lrm_agent(n_runs, session_name, config_file):
+def train_symbolworld_lrm_agent(n_runs, session_name, config_file, reward_shaping):
 
     for i in range(n_runs):
 
@@ -104,13 +115,18 @@ def train_symbolworld_lrm_agent(n_runs, session_name, config_file):
 
         env = SymbolWorldEnv(seed=i)
 
+        if reward_shaping:
+            reward_shaper = AutomatedRewardShaper(env.get_perfect_rm(), env.get_perfect_rewards())
+        else:
+            reward_shaper = NullRewardShaper()
+
         start = time.time()
-        results = agent.run_lrm(env, seed=i)
+        results = agent.run_lrm(env, seed=i, reward_shaper=reward_shaper)
         run_time = int(time.time() - start)
         save_results(results, run_time, session_name, seed=i)
 
 
-def train_lrm_agent(env, n_runs, session_name, config_file):
+def train_lrm_agent(env, n_runs, session_name, config_file, reward_shaping):
 
     scenarios = {
 
@@ -123,7 +139,7 @@ def train_lrm_agent(env, n_runs, session_name, config_file):
     if env in scenarios:
 
         train_function = scenarios[env]
-        train_function(n_runs, session_name, config_file)
+        train_function(n_runs, session_name, config_file, reward_shaping)
 
     else:
 
@@ -147,11 +163,14 @@ if __name__ == '__main__':
     args_parser.add_argument('-c', '--config',
                              help='Path to the configuration file containing LRM and training parameters',
                              required=True)
+    args_parser.add_argument('-r', '--reward_shaping',
+                             help='If given, use Automated Reward Shaping',
+                             action='store_true')
 
     args = args_parser.parse_args()
 
     tf.compat.v1.disable_v2_behavior()  # TODO: Find a better place (Or port to tf2 directly)
     multiprocessing.set_start_method('fork')  # TODO: Find a better place
 
-    train_lrm_agent(args.env, args.n_runs, args.session, args.config)
+    train_lrm_agent(args.env, args.n_runs, args.session, args.config, args.reward_shaping)
 
