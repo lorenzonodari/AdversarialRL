@@ -225,7 +225,9 @@ class LRMTrainer:
         train_rewards = []
         rm_scores = []
         reward_total = 0
+        shaping_total = 0
         last_reward = 0
+        last_shaping = 0
         step = 0
 
         # Since we discard and recreate policies during execution, plus we don't want to
@@ -257,8 +259,8 @@ class LRMTrainer:
 
                 # Testing
                 if step % self._config["test_freq"] == 0:
-                    print("Step: %d\tTrain: %0.1f" % (step, reward_total - last_reward))
-                    train_rewards.append((step, reward_total - last_reward))
+                    print("Step: %d\tReward: %0.1f" % (step, reward_total - last_reward))
+                    train_rewards.append((step, reward_total - last_reward, 0))
                     last_reward = reward_total
 
                 # Check for episode termination
@@ -320,15 +322,17 @@ class LRMTrainer:
                 u2 = info["rm_state"]
 
                 # Reward shaping
-                reward += potential_function[u2] - potential_function[u1]
+                shaping_reward = potential_function[u2] - potential_function[u1]
 
                 # Update the number of steps and total reward
-                trace.append((o2_events, reward))
                 reward_total += reward
+                shaping_total += shaping_reward
+                full_reward = reward + shaping_reward
+                trace.append((o2_events, full_reward))
                 step += 1
 
                 # Update the current RM if needed
-                self._rm.update_rewards(u1, o2_events, reward)
+                self._rm.update_rewards(u1, o2_events, full_reward)
                 if done:
                     self._rm.add_terminal_observations(o2_events)
 
@@ -337,16 +341,17 @@ class LRMTrainer:
                     add_trace = True
 
                 # Saving this transition
-                self._policy.add_experience(o1_events, o1_features, u1, action, reward, o2_events, o2_features, u2, float(done))
+                self._policy.add_experience(o1_events, o1_features, u1, action, full_reward, o2_events, o2_features, u2, float(done))
 
                 # Learning and updating the target networks (if needed)
                 self._policy.learn_if_needed()
 
                 # Testing
                 if step % self._config["test_freq"] == 0:
-                    print("Step: %d\tTrain: %0.1f" % (step, reward_total - last_reward))
-                    train_rewards.append((step, reward_total - last_reward))
+                    print("Step: %d\tTrue reward: %0.1f\tShaping reward: %0.1f" % (step, reward_total - last_reward, shaping_total - last_shaping))
+                    train_rewards.append((step, reward_total - last_reward, shaping_total - last_shaping))
                     last_reward = reward_total
+                    last_shaping = shaping_total
                     # finishing the experiment if the max number of learning steps was reached
                     if self._policy._get_step() > self._config["max_learning_steps"]:
                         finish_learning = True
