@@ -31,9 +31,9 @@ def save_results(results, run_time, session_name, seed):
     # Save training rewards
     with open(f'{results_folder}/rewards.csv', 'w', newline='') as rewards_file:
         writer = csv.writer(rewards_file)
-        writer.writerow(['Training step', 'Total reward'])
-        for step_num, reward in rewards:
-            writer.writerow([step_num, reward])
+        writer.writerow(['Training step', 'True reward', 'Shaping Reward'])
+        for step_num, true_reward, shaping_reward in rewards:
+            writer.writerow([step_num, true_reward, shaping_reward])
 
     # Save RM scores
     with open(f'{results_folder}/rm_scores.csv', 'w', newline='') as scores_file:
