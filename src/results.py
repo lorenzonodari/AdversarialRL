@@ -57,9 +57,9 @@ def process_training_results(session_folder, execution):
         reader = csv.reader(rewards_file)
         next(reader)  # Discard CSV header
         for row in reader:
-            step, reward = row
+            step, true_reward, shaping_reward = row
             steps.append(int(step))
-            rewards.append(float(reward))
+            rewards.append(float(true_reward))
 
     plt.figure()
     seed = int(execution.strip('seed_'))
