@@ -91,7 +91,17 @@ class LRMConfig(dict):
             # Attempt type conversion from string to actual required type
             try:
 
-                value = value_type(value_str)
+                # Handle booleans separately, since bool('False') is True
+                if value_type is bool:
+                    if value_str == 'True':
+                        value = True
+                    elif value_str == 'False':
+                        value = False
+                    else:
+                        raise ValueError
+                else:
+                    value = value_type(value_str)
+
                 self._update_config(key, value)
 
             except ValueError:
