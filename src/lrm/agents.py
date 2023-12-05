@@ -288,9 +288,12 @@ class LRMTrainer:
 
             # Handle tuple observation spaces
             if isinstance(o1, tuple):
-                o1_features = np.concatenate((*o1, info["event_features"]), axis=None)
+                o1_features = np.concatenate(o1, axis=None)
             else:
-                o1_features = np.concatenate((o1, info["event_features"]), axis=None)
+                o1_features = o1.flatten()
+
+            if self._config["use_lf_in_policy"]:
+                o1_features = np.concatenate((o1_features, info["event_features"]), axis=None)
 
             o1_events = info["events"]
             u1 = info["rm_state"]
@@ -313,9 +316,12 @@ class LRMTrainer:
 
                 # Handle tuple observation spaces
                 if isinstance(o2, tuple):
-                    o2_features = np.concatenate((*o2, info["event_features"]), axis=None)
+                    o2_features = np.concatenate(o2, axis=None)
                 else:
-                    o2_features = np.concatenate((o2, info["event_features"]), axis=None)
+                    o2_features = o2.flatten()
+
+                if self._config["use_lf_in_policy"]:
+                    o2_features = np.concatenate((o2_features, info["event_features"]), axis=None)
 
                 o2_events = info["events"]
                 done = terminated or truncated
@@ -427,11 +433,11 @@ class TrainedLRMAgent:
         self._agent_id = agent_id
 
         # Load the configuration that was used to train the agent
-        config = LRMConfig(config_file=f'{load_folder}/training.conf')
+        self._config = LRMConfig(config_file=f'{load_folder}/training.conf')
 
         # Load the reward machine that was learned
         with open(f'{load_folder}/reward_machine.pkl', 'rb') as rm_file:
-            self._rm = RewardMachine.load(rm_file, config)
+            self._rm = RewardMachine.load(rm_file, self._config)
 
         # Load the agent's policy
         self._tf_session = tf.Session()
@@ -536,7 +542,10 @@ class TrainedLRMAgent:
             obs, info = env.reset(seed=sub_seeder.randint(0, int(4e9)))
 
             # Build the initial observation feature vector
-            obs_features = np.concatenate((obs, info["event_features"]), axis=None)
+            if self._config["use_lf_in_policy"]:
+                obs_features = np.concatenate((obs, info["event_features"]), axis=None)
+            else:
+                obs_features = obs.flatten()
 
             # New episode: reset the agent's RM
             initial_rm_state = self.reset()
@@ -555,7 +564,10 @@ class TrainedLRMAgent:
                 obs, reward, terminated, truncated, info = env.step(action)
 
                 # Prepare observation data
-                obs_features = np.concatenate((obs, info["event_features"]), axis=None)
+                if self._config["use_lf_in_policy"]:
+                    obs_features = np.concatenate((obs, info["event_features"]), axis=None)
+                else:
+                    obs_features = obs.flatten()
 
                 # Update RM state
                 new_rm_state = self.update_rm_state(info["events"])

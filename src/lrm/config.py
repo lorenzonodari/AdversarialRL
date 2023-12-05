@@ -42,6 +42,7 @@ class LRMConfig(dict):
         self["rm_lr_steps"] = 100  # Number of learning steps for Tabu Search
         self["rm_workers"] = 10  # Number of worker threads for Tabu Search
         self["use_perfect_rm"] = False  # If True, use the handcrafted perfect RM instead of learning it
+        self["use_lf_in_policy"] = True  # If True, use LF outputs as additional inputs to the sub-policies
 
         # Generic RL configuration
         self["gamma"] = 0.9  # Discount factor - value in [0, 1]
