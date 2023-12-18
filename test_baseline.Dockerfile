@@ -2,11 +2,11 @@
 FROM rayproject/ray-ml:2.3.0-py310-gpu
 
 # Build-time arguments
-ARG env
+ARG prefix
 
 # Propagate build-time arguments to environment variables to make sure that the container
 # can access their value at runtime.
-ENV TESTING_ENV=${env}
+ENV AGENT_PREFIX=${prefix}
 
 # Make sure protobuf <= 3.20
 RUN pip install protobuf==3.20
@@ -20,4 +20,4 @@ COPY --chown=ray:users ./agents /code/agents
 WORKDIR /code
 
 # Execute testing script
-CMD python src/testing.py -t baseline -n 1000 -m 500 -a perfect_${TESTING_ENV} -s test_${TESTING_ENV}_baseline
+CMD python src/testing.py -t baseline -n 1000 -m 500 -a ${AGENT_PREFIX} -s test_${AGENT_PREFIX}_baseline
