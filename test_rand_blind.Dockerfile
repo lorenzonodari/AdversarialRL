@@ -20,4 +20,4 @@ COPY --chown=ray:users ./agents/ /code/agents
 WORKDIR /code
 
 # Execute testing script
-CMD python src/testing.py -t rand-blind -n 1000 -m 500 -a ${AGENT_PREFIX} -s test_${TESTING_ENV}_rand-blind
+CMD python src/testing.py -t rand-blind -n 1000 -m 500 -a ${AGENT_PREFIX} -s test_${AGENT_PREFIX}_rand-blind
